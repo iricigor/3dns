@@ -1,0 +1,11 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "F5: Open Nightscout Verifier",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "cmd /c start \"\" \"${workspaceFolder}\\index.html\""
+    }
+  ]
+}

@@ -1,0 +1,1344 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nightscout 24h CGM Viewer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+    :root {
+      --bg-a: #f9fafb;
+      --bg-b: #f6f8fa;
+      --surface: rgba(255, 255, 255, 0.9);
+      --surface-secondary: rgba(245, 246, 247, 0.5);
+      --surface-strong: #ffffff;
+      --text: #0d1419;
+      --text-secondary: #424856;
+      --accent: #106ebe;
+      --accent-hover: #0d47a1;
+      --ok: #107c10;
+      --error: #d83b01;
+      --warning: #ffb900;
+      --border: #d0d7dd;
+      --divider: #e1e4e8;
+      --chip: #f0f2f5;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.12);
+      --spark: #0078d4;
+      --low: #ffb900;
+      --in-range: #107c10;
+      --high: #d83b01;
+      --focus-outline: 2px solid #106ebe;
+    }
+
+    body[data-theme="dark"] {
+      --bg-a: #0a0e11;
+      --bg-b: #0f1419;
+      --surface: rgba(20, 25, 32, 0.92);
+      --surface-secondary: rgba(40, 48, 60, 0.4);
+      --surface-strong: #161b22;
+      --text: #f2f4f8;
+      --text-secondary: #d0d6dc;
+      --accent: #5eb7f6;
+      --accent-hover: #7fc7ff;
+      --ok: #6bb700;
+      --error: #ff8c00;
+      --warning: #ffce20;
+      --border: #3e474f;
+      --divider: #2d333b;
+      --chip: #2d333b;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+      --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.32);
+      --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.48);
+      --spark: #7fc7ff;
+      --low: #ffce20;
+      --in-range: #6bb700;
+      --high: #ff8c00;
+      --focus-outline: 2px solid #5eb7f6;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--bg-a);
+      padding: 24px 16px;
+      transition: background 200ms ease;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 1600px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+      transition: all 200ms ease;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 20px;
+      background: var(--surface-secondary);
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text);
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.4;
+      max-width: 52ch;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .control-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .control-group label {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: none;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .control-group select {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface-strong);
+      color: var(--text);
+      font: inherit;
+      padding: 4px 26px 4px 8px;
+      min-height: 28px;
+    }
+
+    .control-group select:focus {
+      outline: var(--focus-outline);
+      outline-offset: 2px;
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 100ms ease;
+    }
+
+    .toggle:hover {
+      border-color: var(--text-secondary);
+      background: var(--surface-secondary);
+    }
+
+    .toggle input {
+      width: 32px;
+      height: 20px;
+      appearance: none;
+      background: #a0a9b0;
+      border-radius: 10px;
+      position: relative;
+      border: none;
+      margin: 0;
+      cursor: pointer;
+      transition: background 140ms ease-out;
+    }
+
+    .toggle input::before {
+      content: '';
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #ffffff;
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      transition: transform 140ms ease-out;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .toggle input:checked {
+      background: var(--accent);
+    }
+
+    .toggle input:checked::before {
+      transform: translateX(12px);
+    }
+
+    .toggle input:focus {
+      outline: var(--focus-outline);
+      outline-offset: 2px;
+    }
+
+    .panel {
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+
+    label {
+      font-weight: 500;
+      font-size: 12px;
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="url"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--surface-strong);
+      transition: all 140ms ease;
+    }
+
+    input[type="url"]::placeholder {
+      color: var(--text-secondary);
+    }
+
+    input[type="url"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(16, 110, 190, 0.1);
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+
+    .hint {
+      margin: 4px 0 0;
+      color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    button {
+      border: none;
+      border-radius: 4px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      background: var(--accent);
+      color: #ffffff;
+      cursor: pointer;
+      transition: all 140ms ease;
+      white-space: nowrap;
+    }
+
+    button:hover:not([disabled]) {
+      background: var(--accent-hover);
+      box-shadow: var(--shadow-sm);
+    }
+
+    button:active:not([disabled]) {
+      transform: translateY(1px);
+    }
+
+    button:focus {
+      outline: var(--focus-outline);
+      outline-offset: 2px;
+    }
+
+    button[disabled] {
+      background: #c8cdd2;
+      color: #a0a9b0;
+      cursor: not-allowed;
+    }
+
+    .status {
+      border: 1px solid var(--divider);
+      border-radius: 4px;
+      padding: 12px;
+      background: var(--surface-secondary);
+      font-size: 13px;
+      line-height: 1.5;
+      transition: all 140ms ease;
+    }
+
+    .status-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .status.ok {
+      border-color: var(--ok);
+      background: rgba(16, 124, 16, 0.04);
+    }
+
+    .status.ok .status-title {
+      color: var(--ok);
+    }
+
+    .status.error {
+      border-color: var(--error);
+      background: rgba(216, 59, 1, 0.04);
+    }
+
+    .status.error .status-title {
+      color: var(--error);
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 16px;
+      align-items: stretch;
+      padding: 20px;
+      border-top: 1px solid var(--divider);
+      background: var(--surface);
+    }
+
+    .hero {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-strong);
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+      transition: all 140ms ease;
+    }
+
+    .hero:hover {
+      box-shadow: var(--shadow-sm);
+      border-color: var(--text-secondary);
+    }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hero-top h2 {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .chip {
+      font-size: 11px;
+      background: var(--chip);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .value {
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 700;
+      line-height: 1;
+      margin: 4px 0;
+    }
+
+    .meta {
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--text-secondary);
+      font-size: 12px;
+      letter-spacing: 0.3px;
+    }
+
+    .spark-wrap {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      background: var(--surface-secondary);
+      transition: all 100ms ease;
+    }
+
+    .spark-wrap:hover {
+      background: var(--chip);
+    }
+
+    .spark {
+      width: 100%;
+      height: 140px;
+      display: block;
+    }
+
+    .metrics {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-strong);
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      transition: all 140ms ease;
+    }
+
+    .metrics:hover {
+      box-shadow: var(--shadow-sm);
+      border-color: var(--text-secondary);
+    }
+
+    .metrics h3 {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      background: var(--chip);
+      transition: all 100ms ease;
+    }
+
+    .metric:hover {
+      background: var(--surface-secondary);
+      border-color: var(--accent);
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+
+    .metric-value {
+      margin-top: 4px;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    .range-bars {
+      display: grid;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 48px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .bar-row > span:first-child {
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .bar {
+      height: 6px;
+      border-radius: 3px;
+      background: var(--divider);
+      overflow: hidden;
+    }
+
+    .bar > span {
+      display: block;
+      height: 100%;
+      border-radius: 3px;
+      transition: width 400ms ease;
+    }
+
+    .bar-row strong {
+      color: var(--text-secondary);
+      min-width: 32px;
+      text-align: right;
+    }
+
+    .mono {
+      font-family: 'IBM Plex Mono', monospace;
+      word-break: break-word;
+      color: var(--text-secondary);
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      border-top: 1px solid var(--divider);
+      padding-top: 8px;
+      margin-top: 4px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 800px) {
+      .header {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .panel {
+        padding: 16px;
+      }
+
+      .input-row {
+        grid-template-columns: 1fr;
+      }
+
+      .dashboard {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 16px;
+      }
+
+      .bar-row {
+        grid-template-columns: 44px 1fr auto;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .spark {
+        height: 110px;
+      }
+    }
+
+    @media (min-width: 1440px) {
+      .app {
+        max-width: 1760px;
+      }
+
+      .dashboard {
+        grid-template-columns: 1.9fr 1fr;
+      }
+
+      .spark {
+        height: 180px;
+      }
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <main class="app">
+    <section class="header">
+      <div>
+        <h1 class="title">Nightscout 24h CGM Viewer</h1>
+        <p class="subtitle">Paste one Nightscout URL containing a token to verify reader scope and render the last 24 hours of CGM in one central dashboard.</p>
+      </div>
+      <div class="controls">
+        <label class="toggle" for="themeToggle">
+          Theme
+          <input id="themeToggle" type="checkbox" aria-label="Toggle dark mode" />
+          <span>Dark</span>
+        </label>
+        <label class="toggle" for="unitToggle">
+          Units
+          <input id="unitToggle" type="checkbox" aria-label="Toggle mmol per liter" />
+          <span>mmol/L</span>
+        </label>
+        <div class="control-group">
+          <label for="lineColorMode">Line color</label>
+          <select id="lineColorMode" aria-label="Choose readings line color mode">
+            <option value="monochrome">Monochrome</option>
+            <option value="basic">Basic colors</option>
+            <option value="hsv">HSV spectrum</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="lineViewMode">Line view</label>
+          <select id="lineViewMode" aria-label="Choose readings line view mode">
+            <option value="2d">2D</option>
+            <option value="3d">3D perspective</option>
+            <option value="3d-roc">3D + rate of change</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div>
+        <label for="nightscoutUrl">Nightscout URL (must include token)</label>
+        <form id="verify-form" class="input-row">
+          <input
+            id="nightscoutUrl"
+            name="nightscoutUrl"
+            type="url"
+            placeholder="https://your-site.example.com/?token=YOUR_READER_TOKEN"
+            required
+          />
+          <button id="verify-btn" type="submit">Load 24h Data</button>
+        </form>
+        <p class="hint">Accepted forms: root or entries API URL, as long as it includes ?token=...</p>
+      </div>
+
+      <section class="status" id="status" aria-live="polite" role="status">
+        <div class="status-title">Status: waiting for input</div>
+        <div>Enter details above to test connectivity.</div>
+      </section>
+
+      <section id="dashboard" class="dashboard hidden">
+        <article class="hero">
+          <div class="hero-top">
+            <h2>Latest Glucose</h2>
+            <span id="scopeChip" class="chip">token scope: unknown</span>
+          </div>
+          <div id="heroValue" class="value">--</div>
+          <div id="heroMeta" class="meta">Waiting for data...</div>
+
+          <div class="spark-wrap">
+            <svg id="sparkline" class="spark" viewBox="0 0 700 120" preserveAspectRatio="none" role="img" aria-label="24 hour glucose trend">
+              <g id="sparkSegments"></g>
+            </svg>
+          </div>
+          <div id="endpoint" class="mono"></div>
+        </article>
+
+        <aside class="metrics">
+          <h3>Last 24h Snapshot</h3>
+          <div class="metric-grid">
+            <div class="metric">
+              <div class="metric-label">Average</div>
+              <div id="avgValue" class="metric-value">--</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Minimum</div>
+              <div id="minValue" class="metric-value">--</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Maximum</div>
+              <div id="maxValue" class="metric-value">--</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Data Points</div>
+              <div id="pointCount" class="metric-value">--</div>
+            </div>
+          </div>
+
+          <div class="range-bars">
+            <div class="bar-row">
+              <span>Low</span>
+              <div class="bar"><span id="lowBar" style="background: var(--low); width: 0%"></span></div>
+              <strong id="lowPct">0%</strong>
+            </div>
+            <div class="bar-row">
+              <span>Target</span>
+              <div class="bar"><span id="targetBar" style="background: var(--in-range); width: 0%"></span></div>
+              <strong id="targetPct">0%</strong>
+            </div>
+            <div class="bar-row">
+              <span>High</span>
+              <div class="bar"><span id="highBar" style="background: var(--high); width: 0%"></span></div>
+              <strong id="highPct">0%</strong>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById('verify-form');
+    const button = document.getElementById('verify-btn');
+    const nightscoutUrlInput = document.getElementById('nightscoutUrl');
+    const statusEl = document.getElementById('status');
+    const dashboard = document.getElementById('dashboard');
+    const themeToggle = document.getElementById('themeToggle');
+    const unitToggle = document.getElementById('unitToggle');
+    const lineColorModeSelect = document.getElementById('lineColorMode');
+    const lineViewModeSelect = document.getElementById('lineViewMode');
+    const heroValue = document.getElementById('heroValue');
+    const heroMeta = document.getElementById('heroMeta');
+    const scopeChip = document.getElementById('scopeChip');
+    const avgValue = document.getElementById('avgValue');
+    const minValue = document.getElementById('minValue');
+    const maxValue = document.getElementById('maxValue');
+    const pointCount = document.getElementById('pointCount');
+    const lowBar = document.getElementById('lowBar');
+    const targetBar = document.getElementById('targetBar');
+    const highBar = document.getElementById('highBar');
+    const lowPct = document.getElementById('lowPct');
+    const targetPct = document.getElementById('targetPct');
+    const highPct = document.getElementById('highPct');
+    const sparkSegments = document.getElementById('sparkSegments');
+    const endpointEl = document.getElementById('endpoint');
+    const urlStorageKey = '3dns.nightscoutUrl';
+    const themeStorageKey = '3dns.theme';
+    const unitStorageKey = '3dns.units';
+    const lineColorStorageKey = '3dns.lineColorMode';
+    const lineViewStorageKey = '3dns.lineViewMode';
+
+    let latestModel = null;
+    let glucoseUnit = 'mgdl';
+    let lineColorMode = 'monochrome';
+    let lineViewMode = '2d';
+
+    function restoreStoredUrl() {
+      try {
+        const storedUrl = window.localStorage.getItem(urlStorageKey);
+        if (storedUrl) {
+          nightscoutUrlInput.value = storedUrl;
+        }
+      } catch (err) {
+        // Ignore storage access failures and continue without persistence.
+      }
+    }
+
+    function persistUrl(value) {
+      try {
+        const trimmedValue = value.trim();
+        if (trimmedValue) {
+          window.localStorage.setItem(urlStorageKey, trimmedValue);
+        } else {
+          window.localStorage.removeItem(urlStorageKey);
+        }
+      } catch (err) {
+        // Ignore storage access failures and continue without persistence.
+      }
+    }
+
+    function restoreStoredSettings() {
+      try {
+        const storedTheme = window.localStorage.getItem(themeStorageKey);
+        if (storedTheme === 'dark' || storedTheme === 'light') {
+          themeToggle.checked = storedTheme === 'dark';
+          document.body.setAttribute('data-theme', storedTheme);
+        }
+
+        const storedUnits = window.localStorage.getItem(unitStorageKey);
+        if (storedUnits === 'mmol' || storedUnits === 'mgdl') {
+          glucoseUnit = storedUnits;
+          unitToggle.checked = storedUnits === 'mmol';
+        }
+
+        const storedLineColorMode = window.localStorage.getItem(lineColorStorageKey);
+        if (storedLineColorMode === 'monochrome' || storedLineColorMode === 'basic' || storedLineColorMode === 'hsv') {
+          lineColorMode = storedLineColorMode;
+          lineColorModeSelect.value = storedLineColorMode;
+        }
+
+        const storedLineViewMode = window.localStorage.getItem(lineViewStorageKey);
+        if (storedLineViewMode === '2d' || storedLineViewMode === '3d' || storedLineViewMode === '3d-roc') {
+          lineViewMode = storedLineViewMode;
+          lineViewModeSelect.value = storedLineViewMode;
+        }
+      } catch (err) {
+        // Ignore storage access failures and continue without persistence.
+      }
+    }
+
+    function persistSetting(key, value) {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch (err) {
+        // Ignore storage access failures and continue without persistence.
+      }
+    }
+
+    function parseNightscoutConnection(rawUrl) {
+      const parsed = new URL(rawUrl.trim());
+
+      const token = parsed.searchParams.get('token');
+      if (!token || !token.trim()) {
+        throw new Error('Missing token query parameter. Include ?token=YOUR_READER_TOKEN in the URL.');
+      }
+
+      let basePath = parsed.pathname.replace(/\/$/, '');
+      basePath = basePath.replace(/\/api\/v1\/entries\.json$/i, '');
+      const baseUrl = (parsed.origin + basePath).replace(/\/$/, '');
+
+      return {
+        baseUrl,
+        token: token.trim()
+      };
+    }
+
+    function setStatus(title, message, kind) {
+      statusEl.className = 'status' + (kind ? ' ' + kind : '');
+      const titleEl = statusEl.querySelector('.status-title');
+      titleEl.textContent = title;
+      statusEl.lastElementChild.textContent = message;
+    }
+
+    function formatTimestamp(entry) {
+      if (entry.dateString) {
+        const dt = new Date(entry.dateString);
+        return Number.isNaN(dt.getTime()) ? entry.dateString : dt.toLocaleString();
+      }
+
+      if (entry.date) {
+        const dt = new Date(entry.date);
+        return Number.isNaN(dt.getTime()) ? String(entry.date) : dt.toLocaleString();
+      }
+
+      return 'unknown';
+    }
+
+    function toDisplayGlucose(mgdl) {
+      if (glucoseUnit === 'mmol') {
+        return (mgdl / 18).toFixed(1) + ' mmol/L';
+      }
+
+      return Math.round(mgdl) + ' mg/dL';
+    }
+
+    function toDisplayNumber(mgdl) {
+      if (glucoseUnit === 'mmol') {
+        return (mgdl / 18).toFixed(1);
+      }
+
+      return String(Math.round(mgdl));
+    }
+
+    function glucoseZone(value) {
+      if (value < 70) return 'low';
+      if (value > 180) return 'high';
+      return 'target';
+    }
+
+    function glucoseZoneEu(value) {
+      if (value < 72) return 'low';
+      if (value > 180) return 'high';
+      return 'target';
+    }
+
+    function glucoseToHsvStroke(value) {
+      const mmol = value / 18;
+      const clampedMmol = Math.max(3, Math.min(13, mmol));
+      const ratio = (clampedMmol - 3) / 10;
+      const hue = 30 + ratio * 300;
+      return 'hsl(' + hue.toFixed(1) + ' 100% 50%)';
+    }
+
+    function buildSparkline(values) {
+      if (!values.length) {
+        return [];
+      }
+
+      const width = 700;
+      const height = 120;
+      const minV = Math.min(...values);
+      const maxV = Math.max(...values);
+      const range = maxV - minV || 1;
+      const step = values.length > 1 ? width / (values.length - 1) : 0;
+
+      const points = [];
+      for (let i = 0; i < values.length; i += 1) {
+        points.push({
+          x: i * step,
+          y: height - ((values[i] - minV) / range) * (height - 8) - 4,
+          value: values[i]
+        });
+      }
+
+      return points;
+    }
+
+    function buildPerspectiveSparkline(values, useRocDimension) {
+      if (!values.length) {
+        return [];
+      }
+
+      const minV = Math.min(...values);
+      const maxV = Math.max(...values);
+      const range = maxV - minV || 1;
+      const rocLookback = 3;
+      const deltas = values.map((value, index) => {
+        if (index === 0) {
+          return 0;
+        }
+
+        const lookbackIndex = Math.max(0, index - rocLookback);
+        return value - values[lookbackIndex];
+      });
+      const maxAbsDelta = Math.max(...deltas.map((delta) => Math.abs(delta)), 1);
+      const backLeft = { x: 112, y: 44 };
+      const backRight = { x: 590, y: 44 };
+      const frontLeft = { x: 30, y: 122 };
+      const frontRight = { x: 672, y: 122 };
+      const backTopLeft = { x: 112, y: 10 };
+      const backTopRight = { x: 590, y: 10 };
+
+      const points = [];
+      for (let i = 0; i < values.length; i += 1) {
+        const ratio = values.length > 1 ? i / (values.length - 1) : 1;
+        const floorLeftX = frontLeft.x + (backLeft.x - frontLeft.x) * ratio;
+        const floorRightX = frontRight.x + (backRight.x - frontRight.x) * ratio;
+        const floorLeftY = frontLeft.y + (backLeft.y - frontLeft.y) * ratio;
+        const floorRightY = frontRight.y + (backRight.y - frontRight.y) * ratio;
+        const floorX = floorLeftX + (floorRightX - floorLeftX) * ratio;
+        const floorY = floorLeftY + (floorRightY - floorLeftY) * ratio;
+        const normalized = (values[i] - minV) / range;
+        const deltaRatio = Math.max(-1, Math.min(1, deltas[i] / maxAbsDelta));
+        const rocOffset = useRocDimension ? deltaRatio * (36 - ratio * 14) : 0;
+        const lineX = useRocDimension ? floorX + rocOffset * 0.42 : floorX;
+        points.push({
+          x: lineX,
+          y: floorY - normalized * 78,
+          floorX,
+          floorY,
+          shadowX: floorX,
+          shadowY: floorY,
+          rocFloorX: floorX + rocOffset * 0.92,
+          rocFloorY: floorY - 6,
+          rocOffset,
+          delta: deltas[i],
+          value: values[i]
+        });
+      }
+
+      return {
+        points,
+        floor: { backLeft, backRight, frontLeft, frontRight, backTopLeft, backTopRight }
+      };
+    }
+
+    function buildPerspectiveBackdrop(floor, points) {
+      const gridLines = [];
+      const wallLines = [];
+      for (let step = 1; step <= 4; step += 1) {
+        const ratio = step / 5;
+        const x1 = floor.frontLeft.x + (floor.frontRight.x - floor.frontLeft.x) * ratio;
+        const y1 = floor.frontLeft.y + (floor.frontRight.y - floor.frontLeft.y) * ratio;
+        const x2 = floor.backLeft.x + (floor.backRight.x - floor.backLeft.x) * ratio;
+        const y2 = floor.backLeft.y + (floor.backRight.y - floor.backLeft.y) * ratio;
+        gridLines.push(
+          '<line x1="' + x1.toFixed(2) + '" y1="' + y1.toFixed(2) + '" x2="' + x2.toFixed(2) + '" y2="' + y2.toFixed(2) + '" stroke="var(--divider)" stroke-width="1"></line>'
+        );
+
+        const wallX = floor.backLeft.x + (floor.backRight.x - floor.backLeft.x) * ratio;
+        wallLines.push(
+          '<line x1="' + wallX.toFixed(2) + '" y1="' + floor.backLeft.y.toFixed(2) + '" x2="' + wallX.toFixed(2) + '" y2="' + floor.backTopLeft.y.toFixed(2) + '" stroke="var(--divider)" stroke-width="1"></line>'
+        );
+      }
+
+      const floorPath = points.map((point, index) =>
+        (index === 0 ? 'M ' : ' L ') + point.floorX.toFixed(2) + ' ' + point.floorY.toFixed(2)
+      ).join('');
+
+      return [
+        '<polygon points="' +
+          floor.backTopLeft.x + ',' + floor.backTopLeft.y + ' ' +
+          floor.backTopRight.x + ',' + floor.backTopRight.y + ' ' +
+          floor.backRight.x + ',' + floor.backRight.y + ' ' +
+          floor.backLeft.x + ',' + floor.backLeft.y +
+        '" fill="var(--chip)" stroke="var(--divider)" stroke-width="1"></polygon>',
+        '<polygon points="' +
+          floor.frontLeft.x + ',' + floor.frontLeft.y + ' ' +
+          floor.frontRight.x + ',' + floor.frontRight.y + ' ' +
+          floor.backRight.x + ',' + floor.backRight.y + ' ' +
+          floor.backLeft.x + ',' + floor.backLeft.y +
+        '" fill="var(--surface-secondary)" stroke="var(--divider)" stroke-width="1"></polygon>',
+        wallLines.join(''),
+        gridLines.join(''),
+        '<line x1="' + floor.backTopLeft.x + '" y1="' + floor.backTopLeft.y + '" x2="' + floor.backTopRight.x + '" y2="' + floor.backTopRight.y + '" stroke="var(--border)" stroke-width="1.5"></line>',
+        '<line x1="' + floor.backTopLeft.x + '" y1="' + floor.backTopLeft.y + '" x2="' + floor.backLeft.x + '" y2="' + floor.backLeft.y + '" stroke="var(--border)" stroke-width="1.5"></line>',
+        '<line x1="' + floor.backTopRight.x + '" y1="' + floor.backTopRight.y + '" x2="' + floor.backRight.x + '" y2="' + floor.backRight.y + '" stroke="var(--border)" stroke-width="1.5"></line>',
+        '<path d="' + floorPath + '" fill="none" stroke="var(--border)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>'
+      ].join('');
+    }
+
+    function buildPerspectiveRibbon(points, stroke) {
+      const topPath = points.map((point, index) =>
+        (index === 0 ? 'M ' : ' L ') + point.x.toFixed(2) + ' ' + point.y.toFixed(2)
+      ).join('');
+
+      const areaPoints = points.map((point) => point.x.toFixed(2) + ',' + point.y.toFixed(2));
+      const floorPoints = points.slice().reverse().map((point) => point.shadowX.toFixed(2) + ',' + point.shadowY.toFixed(2));
+      const shadowPath = points.map((point, index) =>
+        (index === 0 ? 'M ' : ' L ') + point.shadowX.toFixed(2) + ' ' + point.shadowY.toFixed(2)
+      ).join('');
+      const markers = points.filter((_, index) => index % 18 === 0 || index === points.length - 1).map((point) =>
+        '<circle cx="' + point.x.toFixed(2) + '" cy="' + point.y.toFixed(2) + '" r="3.4" fill="' + stroke + '" stroke="var(--surface-strong)" stroke-width="1.4"></circle>'
+      );
+      const shadowMarkers = points.filter((_, index) => index % 18 === 0 || index === points.length - 1).map((point) =>
+        '<circle cx="' + point.shadowX.toFixed(2) + '" cy="' + point.shadowY.toFixed(2) + '" r="2.2" fill="var(--divider)" opacity="0.95"></circle>'
+      );
+
+      return [
+        '<polygon points="' + areaPoints.concat(floorPoints).join(' ') + '" fill="' + stroke + '" fill-opacity="0.14" stroke="none"></polygon>',
+        '<path d="' + shadowPath + '" fill="none" stroke="var(--divider)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"></path>',
+        '<path d="' + topPath + '" fill="none" stroke="' + stroke + '" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path>',
+        shadowMarkers.join(''),
+        markers.join('')
+      ].join('');
+    }
+
+    function buildRocGuides(points) {
+      const centerline = points.map((point, index) =>
+        (index === 0 ? 'M ' : ' L ') + point.floorX.toFixed(2) + ' ' + point.floorY.toFixed(2)
+      ).join('');
+      const rocMarkers = points.filter((_, index) => index % 24 === 0 || index === points.length - 1).map((point) => {
+        const stroke = point.rocOffset < -2 ? 'var(--high)' : point.rocOffset > 2 ? 'var(--in-range)' : 'var(--border)';
+        return [
+          '<line x1="' + point.floorX.toFixed(2) + '" y1="' + point.floorY.toFixed(2) + '" x2="' + point.rocFloorX.toFixed(2) + '" y2="' + point.rocFloorY.toFixed(2) + '" stroke="' + stroke + '" stroke-width="1.6" stroke-dasharray="3 3"></line>',
+          '<circle cx="' + point.rocFloorX.toFixed(2) + '" cy="' + point.rocFloorY.toFixed(2) + '" r="2.4" fill="' + stroke + '"></circle>'
+        ].join('');
+      });
+
+      return [
+        '<path d="' + centerline + '" fill="none" stroke="var(--divider)" stroke-width="1.4" stroke-dasharray="5 5" opacity="0.95"></path>',
+        rocMarkers.join('')
+      ].join('');
+    }
+
+    function renderSparkline(values) {
+      const lineData = lineViewMode === '2d'
+        ? buildSparkline(values)
+        : buildPerspectiveSparkline(values, lineViewMode === '3d-roc');
+      const points = Array.isArray(lineData) ? lineData : lineData.points;
+      if (!points.length) {
+        sparkSegments.innerHTML = '';
+        return;
+      }
+
+      const fragments = [];
+
+      if (lineViewMode !== '2d') {
+        fragments.push(buildPerspectiveBackdrop(lineData.floor, points));
+        if (lineViewMode === '3d-roc') {
+          fragments.push(buildRocGuides(points));
+        }
+      }
+
+      if (lineColorMode === 'monochrome') {
+        if (lineViewMode !== '2d') {
+          fragments.push(buildPerspectiveRibbon(points, 'var(--spark)'));
+          const drops = points.filter((_, index) => index % 24 === 0 || index === points.length - 1).map((point) =>
+            '<line x1="' + point.x.toFixed(2) + '" y1="' + point.y.toFixed(2) + '" x2="' + point.shadowX.toFixed(2) + '" y2="' + point.shadowY.toFixed(2) + '" stroke="var(--border)" stroke-width="1"></line>'
+          );
+          fragments.push(drops.join(''));
+        } else {
+          const d = points.map((point, index) =>
+            (index === 0 ? 'M ' : ' L ') + point.x.toFixed(2) + ' ' + point.y.toFixed(2)
+          ).join('');
+          fragments.push('<path d="' + d + '" fill="none" stroke="var(--spark)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>');
+        }
+        sparkSegments.innerHTML = fragments.join('');
+        return;
+      }
+
+      const segments = [];
+      for (let index = 1; index < points.length; index += 1) {
+        const previous = points[index - 1];
+        const current = points[index];
+        let stroke;
+        if (lineColorMode === 'basic') {
+          const zone = glucoseZoneEu(current.value);
+          stroke = zone === 'low' ? 'var(--high)' : zone === 'high' ? 'var(--low)' : 'var(--in-range)';
+        } else {
+          stroke = glucoseToHsvStroke(current.value);
+        }
+        segments.push(
+          '<path d="M ' + previous.x.toFixed(2) + ' ' + previous.y.toFixed(2) +
+          ' L ' + current.x.toFixed(2) + ' ' + current.y.toFixed(2) +
+          '" fill="none" stroke="' + stroke + '" stroke-width="3" stroke-linecap="round"></path>'
+        );
+      }
+      if (lineViewMode !== '2d') {
+        const avgValue = points.reduce((sum, point) => sum + point.value, 0) / points.length;
+        const accentStroke = lineColorMode === 'hsv' ? glucoseToHsvStroke(avgValue) : 'var(--spark)';
+        fragments.push(buildPerspectiveRibbon(points, accentStroke));
+        const drops = points.filter((_, index) => index % 24 === 0 || index === points.length - 1).map((point) =>
+          '<line x1="' + point.x.toFixed(2) + '" y1="' + point.y.toFixed(2) + '" x2="' + point.shadowX.toFixed(2) + '" y2="' + point.shadowY.toFixed(2) + '" stroke="var(--border)" stroke-width="1"></line>'
+        );
+        fragments.push(drops.join(''));
+      }
+      fragments.push(segments.join(''));
+      sparkSegments.innerHTML = fragments.join('');
+    }
+
+    function renderDashboard() {
+      if (!latestModel) {
+        return;
+      }
+
+      const latest = latestModel.latest;
+      const values = latestModel.entries.map((entry) => Number(entry.sgv));
+      const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const lowCount = values.filter((v) => v < 70).length;
+      const highCount = values.filter((v) => v > 180).length;
+      const targetCount = values.length - lowCount - highCount;
+      const pct = (n) => ((n / values.length) * 100).toFixed(1) + '%';
+
+      const zone = glucoseZone(Number(latest.sgv));
+      heroValue.textContent = toDisplayGlucose(Number(latest.sgv));
+      heroValue.style.color = zone === 'low' ? 'var(--low)' : zone === 'high' ? 'var(--high)' : 'var(--in-range)';
+      heroMeta.textContent = (latest.direction || 'unknown') + ' | ' + formatTimestamp(latest);
+      scopeChip.textContent = 'token scope: ' + latestModel.tokenScopeLabel;
+
+      avgValue.textContent = toDisplayNumber(avg) + (glucoseUnit === 'mmol' ? ' mmol/L' : ' mg/dL');
+      minValue.textContent = toDisplayGlucose(min);
+      maxValue.textContent = toDisplayGlucose(max);
+      pointCount.textContent = String(values.length);
+
+      const lowPctValue = pct(lowCount);
+      const targetPctValue = pct(targetCount);
+      const highPctValue = pct(highCount);
+
+      lowBar.style.width = lowPctValue;
+      targetBar.style.width = targetPctValue;
+      highBar.style.width = highPctValue;
+      lowPct.textContent = lowPctValue;
+      targetPct.textContent = targetPctValue;
+      highPct.textContent = highPctValue;
+
+      renderSparkline(values);
+      endpointEl.textContent = 'Endpoint: ' + latestModel.endpoint;
+      dashboard.classList.remove('hidden');
+    }
+
+    async function probeReaderOnlyToken(baseUrl, token) {
+      const randomId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID().replace(/-/g, '').slice(0, 24)
+        : String(Date.now()) + String(Math.floor(Math.random() * 1000000));
+
+      const probePaths = [
+        '/api/v1/treatments/' + randomId + '.json',
+        '/api/v1/treatments/' + randomId,
+        '/api/v1/entries/' + randomId + '.json',
+        '/api/v1/entries/' + randomId
+      ];
+
+      for (const path of probePaths) {
+        const withTokenUrl = new URL(baseUrl + path);
+        withTokenUrl.searchParams.set('token', token);
+
+        let withTokenResponse;
+        try {
+          withTokenResponse = await fetch(withTokenUrl.toString(), {
+            method: 'DELETE',
+            headers: {
+              Accept: 'application/json'
+            }
+          });
+        } catch (err) {
+          continue;
+        }
+
+        if (withTokenResponse.status === 401 || withTokenResponse.status === 403) {
+          return {
+            state: 'reader',
+            detail: 'Write operations are denied for this token.'
+          };
+        }
+
+        const withoutTokenUrl = new URL(baseUrl + path);
+        let withoutTokenResponse;
+        try {
+          withoutTokenResponse = await fetch(withoutTokenUrl.toString(), {
+            method: 'DELETE',
+            headers: {
+              Accept: 'application/json'
+            }
+          });
+        } catch (err) {
+          continue;
+        }
+
+        const withoutTokenDenied = withoutTokenResponse.status === 401 || withoutTokenResponse.status === 403;
+        const withTokenDenied = withTokenResponse.status === 401 || withTokenResponse.status === 403;
+
+        if (withoutTokenDenied && !withTokenDenied) {
+          return {
+            state: 'writer',
+            detail: 'Token appears to have write/delete privileges.'
+          };
+        }
+      }
+
+      return {
+        state: 'unknown',
+        detail: 'Could not conclusively determine token role with a safe probe.'
+      };
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const nightscoutUrlRaw = nightscoutUrlInput.value;
+
+      if (!nightscoutUrlRaw.trim()) {
+        setStatus('Status: missing input', 'Please enter your Nightscout URL with token.', 'error');
+        return;
+      }
+
+      persistUrl(nightscoutUrlRaw);
+
+      let baseUrl;
+      let token;
+      try {
+        const parsedConnection = parseNightscoutConnection(nightscoutUrlRaw);
+        baseUrl = parsedConnection.baseUrl;
+        token = parsedConnection.token;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Please enter a valid URL.';
+        setStatus('Status: invalid URL', message, 'error');
+        return;
+      }
+
+      const endpoint = new URL(baseUrl + '/api/v1/entries.json');
+      endpoint.searchParams.set('count', '288');
+      endpoint.searchParams.set('token', token);
+
+      button.disabled = true;
+      setStatus('Status: checking...', 'Reading last 24h CGM data and validating token scope.');
+
+      try {
+        const response = await fetch(endpoint.toString(), {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('HTTP ' + response.status + ' ' + response.statusText);
+        }
+
+        const data = await response.json();
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error('No CGM entries returned.');
+        }
+
+        const entries = data
+          .filter((entry) => entry && entry.sgv !== undefined && entry.sgv !== null && entry.date)
+          .sort((a, b) => Number(a.date) - Number(b.date));
+
+        if (!entries.length) {
+          throw new Error('No valid CGM points found in last 24 hours.');
+        }
+
+        const latest = entries[entries.length - 1];
+        if (latest.sgv === undefined || latest.sgv === null) {
+          throw new Error('Latest entry is missing sgv value.');
+        }
+
+        const tokenProbe = await probeReaderOnlyToken(baseUrl, token);
+        if (tokenProbe.state === 'writer') {
+          dashboard.classList.add('hidden');
+          setStatus('Status: verification failed', 'This token is not reader-only. ' + tokenProbe.detail + ' Use a dedicated reader token and try again.', 'error');
+          return;
+        }
+
+        latestModel = {
+          entries,
+          latest,
+          endpoint: endpoint.toString(),
+          tokenScopeLabel: tokenProbe.state === 'reader' ? 'reader-only confirmed' : 'unknown'
+        };
+
+        renderDashboard();
+
+        if (tokenProbe.state === 'unknown') {
+          setStatus('Status: verified', 'Data loaded. Reader scope could not be conclusively determined: ' + tokenProbe.detail, 'ok');
+        } else {
+          setStatus('Status: verified', 'Reader token verified and 24h CGM data loaded successfully.', 'ok');
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        dashboard.classList.add('hidden');
+        setStatus('Status: verification failed', message + ' If this page is opened with file://, browser CORS restrictions may block requests.', 'error');
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    themeToggle.addEventListener('change', () => {
+      const theme = themeToggle.checked ? 'dark' : 'light';
+      document.body.setAttribute('data-theme', theme);
+      persistSetting(themeStorageKey, theme);
+    });
+
+    nightscoutUrlInput.addEventListener('input', () => {
+      persistUrl(nightscoutUrlInput.value);
+    });
+
+    unitToggle.addEventListener('change', () => {
+      glucoseUnit = unitToggle.checked ? 'mmol' : 'mgdl';
+      persistSetting(unitStorageKey, glucoseUnit);
+      renderDashboard();
+    });
+
+    lineColorModeSelect.addEventListener('change', () => {
+      lineColorMode = lineColorModeSelect.value;
+      persistSetting(lineColorStorageKey, lineColorMode);
+      renderDashboard();
+    });
+
+    lineViewModeSelect.addEventListener('change', () => {
+      lineViewMode = lineViewModeSelect.value;
+      persistSetting(lineViewStorageKey, lineViewMode);
+      renderDashboard();
+    });
+
+    restoreStoredUrl();
+    restoreStoredSettings();
+  </script>
+</body>
+</html>
