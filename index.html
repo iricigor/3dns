@@ -500,6 +500,10 @@
       gap: 10px;
     }
 
+    .metric-range-summary {
+      grid-column: 1 / -1;
+    }
+
     .metric {
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -571,6 +575,37 @@
       font-weight: 700;
     }
 
+    .stacked-range {
+      margin-top: 8px;
+      height: 12px;
+      border-radius: 999px;
+      background: var(--divider);
+      overflow: hidden;
+      display: flex;
+    }
+
+    .stacked-segment {
+      height: 100%;
+      transition: width 400ms ease;
+    }
+
+    .range-legend {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .range-item {
+      min-width: 0;
+    }
+
+    .range-value {
+      display: block;
+      margin-top: 2px;
+      font-size: 0.95rem;
+    }
+
     .mono {
       font-family: 'IBM Plex Mono', monospace;
       word-break: break-word;
@@ -617,6 +652,16 @@
     @media (min-width: 1440px) {
       .app {
         max-width: 1760px;
+      }
+    }
+
+    @media (min-width: 1240px) {
+      .dashboard {
+        grid-template-columns: minmax(0, 2fr) minmax(360px, 1fr);
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
 
@@ -734,27 +779,26 @@
               <div id="pointCount" class="metric-value">--</div>
             </div>
 
-            <div class="metric metric-range">
-              <div class="metric-label">Low</div>
-              <div class="metric-value">
-                <span class="bar bar-dot"><span id="lowBar" style="background: var(--low); width: 0%"></span></span>
-                <strong id="lowPct" class="range-pct">0%</strong>
+            <div class="metric metric-range-summary">
+              <div class="metric-label">Low / Target / High</div>
+              <div class="stacked-range" role="img" aria-label="Low, Target, and High percentages over the last 24 hours">
+                <span id="lowBar" class="stacked-segment" style="background: var(--low); width: 0%"></span>
+                <span id="targetBar" class="stacked-segment" style="background: var(--in-range); width: 0%"></span>
+                <span id="highBar" class="stacked-segment" style="background: var(--high); width: 0%"></span>
               </div>
-            </div>
-
-            <div class="metric metric-range">
-              <div class="metric-label">Target</div>
-              <div class="metric-value">
-                <span class="bar bar-dot"><span id="targetBar" style="background: var(--in-range); width: 0%"></span></span>
-                <strong id="targetPct" class="range-pct">0%</strong>
-              </div>
-            </div>
-
-            <div class="metric metric-range">
-              <div class="metric-label">High</div>
-              <div class="metric-value">
-                <span class="bar bar-dot"><span id="highBar" style="background: var(--high); width: 0%"></span></span>
-                <strong id="highPct" class="range-pct">0%</strong>
+              <div class="range-legend">
+                <div class="range-item">
+                  <div class="metric-label">Low</div>
+                  <strong id="lowPct" class="range-pct range-value">0%</strong>
+                </div>
+                <div class="range-item">
+                  <div class="metric-label">Target</div>
+                  <strong id="targetPct" class="range-pct range-value">0%</strong>
+                </div>
+                <div class="range-item">
+                  <div class="metric-label">High</div>
+                  <strong id="highPct" class="range-pct range-value">0%</strong>
+                </div>
               </div>
             </div>
           </div>
