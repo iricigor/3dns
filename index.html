@@ -615,6 +615,7 @@
             <option value="2d">2D</option>
             <option value="3d">3D perspective</option>
             <option value="3d-roc">3D + rate of change</option>
+            <option value="3d-c-circle">3D C circle</option>
           </select>
         </div>
       </div>
@@ -782,7 +783,7 @@
         }
 
         const storedLineViewMode = window.localStorage.getItem(lineViewStorageKey);
-        if (storedLineViewMode === '2d' || storedLineViewMode === '3d' || storedLineViewMode === '3d-roc') {
+        if (storedLineViewMode === '2d' || storedLineViewMode === '3d' || storedLineViewMode === '3d-roc' || storedLineViewMode === '3d-c-circle') {
           lineViewMode = storedLineViewMode;
           lineViewModeSelect.value = storedLineViewMode;
         }
@@ -957,6 +958,80 @@
       };
     }
 
+    function buildCCircleSparkline(values) {
+      if (!values.length) {
+        return [];
+      }
+
+      const minV = Math.min(...values);
+      const maxV = Math.max(...values);
+      const range = maxV - minV || 1;
+      const rocLookback = 3;
+      const deltas = values.map((value, index) => {
+        if (index === 0) {
+          return 0;
+        }
+
+        const lookbackIndex = Math.max(0, index - rocLookback);
+        return value - values[lookbackIndex];
+      });
+      const maxAbsDelta = Math.max(...deltas.map((delta) => Math.abs(delta)), 1);
+      const startAngle = (150 * Math.PI) / 180;
+      const sweepAngle = (300 * Math.PI) / 180;
+      const centerX = 350;
+      const centerY = 60;
+      const baseRadius = 192;
+      const radiusRange = 28;
+      const stripHalfWidth = 5.5;
+
+      function projectPoint(angle, radius, heightValue) {
+        return {
+          x: centerX + Math.cos(angle) * radius,
+          y: centerY + Math.sin(angle) * radius * 0.42 - heightValue
+        };
+      }
+
+      const points = [];
+      const axisPoints = [];
+      const outerPoints = [];
+      const innerPoints = [];
+      const shadowOuterPoints = [];
+      const shadowInnerPoints = [];
+
+      for (let i = 0; i < values.length; i += 1) {
+        const ratio = values.length > 1 ? i / (values.length - 1) : 0;
+        const angle = startAngle + sweepAngle * ratio;
+        const normalized = (values[i] - minV) / range;
+        const deltaRatio = Math.max(-1, Math.min(1, deltas[i] / maxAbsDelta));
+        const radius = baseRadius + normalized * radiusRange;
+        const heightValue = deltaRatio * 14;
+        const point = projectPoint(angle, radius, heightValue);
+        const axisPoint = projectPoint(angle, baseRadius, 0);
+        const outerPoint = projectPoint(angle, radius + stripHalfWidth, heightValue);
+        const innerPoint = projectPoint(angle, Math.max(30, radius - stripHalfWidth), heightValue);
+
+        points.push({
+          x: point.x,
+          y: point.y,
+          value: values[i]
+        });
+        axisPoints.push(axisPoint);
+        outerPoints.push(outerPoint);
+        innerPoints.push(innerPoint);
+        shadowOuterPoints.push({ x: outerPoint.x + 8, y: outerPoint.y + 9 });
+        shadowInnerPoints.push({ x: innerPoint.x + 8, y: innerPoint.y + 9 });
+      }
+
+      return {
+        points,
+        axisPoints,
+        outerPoints,
+        innerPoints,
+        shadowOuterPoints,
+        shadowInnerPoints
+      };
+    }
+
     function buildPerspectiveBackdrop(floor, points) {
       const gridLines = [];
       const wallLines = [];
@@ -1046,10 +1121,49 @@
       ].join('');
     }
 
+    function buildCCircleRibbon(lineData, stroke) {
+      const polygonPoints = lineData.outerPoints
+        .concat(lineData.innerPoints.slice().reverse())
+        .map((point) => point.x.toFixed(2) + ',' + point.y.toFixed(2));
+      const shadowPoints = lineData.shadowOuterPoints
+        .concat(lineData.shadowInnerPoints.slice().reverse())
+        .map((point) => point.x.toFixed(2) + ',' + point.y.toFixed(2));
+      const outerPath = lineData.outerPoints.map((point, index) =>
+        (index === 0 ? 'M ' : ' L ') + point.x.toFixed(2) + ' ' + point.y.toFixed(2)
+      ).join('');
+      const innerPath = lineData.innerPoints.map((point, index) =>
+        (index === 0 ? 'M ' : ' L ') + point.x.toFixed(2) + ' ' + point.y.toFixed(2)
+      ).join('');
+      const axisPath = lineData.axisPoints.map((point, index) =>
+        (index === 0 ? 'M ' : ' L ') + point.x.toFixed(2) + ' ' + point.y.toFixed(2)
+      ).join('');
+      const startOuter = lineData.outerPoints[0];
+      const startInner = lineData.innerPoints[0];
+      const endOuter = lineData.outerPoints[lineData.outerPoints.length - 1];
+      const endInner = lineData.innerPoints[lineData.innerPoints.length - 1];
+      const markers = lineData.points.filter((_, index) => index % 24 === 0 || index === lineData.points.length - 1).map((point) =>
+        '<circle cx="' + point.x.toFixed(2) + '" cy="' + point.y.toFixed(2) + '" r="3.3" fill="' + stroke + '" stroke="var(--surface-strong)" stroke-width="1.2"></circle>'
+      );
+
+      return [
+        '<polygon points="' + shadowPoints.join(' ') + '" fill="var(--surface-secondary)" fill-opacity="0.55" stroke="none"></polygon>',
+        '<path d="' + axisPath + '" fill="none" stroke="var(--divider)" stroke-width="1.5" stroke-dasharray="5 5" opacity="0.95"></path>',
+        '<polygon points="' + polygonPoints.join(' ') + '" fill="' + stroke + '" fill-opacity="0.14" stroke="none"></polygon>',
+        '<path d="' + outerPath + '" fill="none" stroke="var(--border)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>',
+        '<path d="' + innerPath + '" fill="none" stroke="var(--border)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>',
+        '<line x1="' + startOuter.x.toFixed(2) + '" y1="' + startOuter.y.toFixed(2) + '" x2="' + startInner.x.toFixed(2) + '" y2="' + startInner.y.toFixed(2) + '" stroke="var(--border)" stroke-width="1.2"></line>',
+        '<line x1="' + endOuter.x.toFixed(2) + '" y1="' + endOuter.y.toFixed(2) + '" x2="' + endInner.x.toFixed(2) + '" y2="' + endInner.y.toFixed(2) + '" stroke="var(--border)" stroke-width="1.2"></line>',
+        markers.join('')
+      ].join('');
+    }
+
     function renderSparkline(values) {
+      const isCircleView = lineViewMode === '3d-c-circle';
       const lineData = lineViewMode === '2d'
         ? buildSparkline(values)
-        : buildPerspectiveSparkline(values, lineViewMode === '3d-roc');
+        : isCircleView
+          ? buildCCircleSparkline(values)
+          : buildPerspectiveSparkline(values, lineViewMode === '3d-roc');
       const points = Array.isArray(lineData) ? lineData : lineData.points;
       if (!points.length) {
         sparkSegments.innerHTML = '';
@@ -1058,7 +1172,11 @@
 
       const fragments = [];
 
-      if (lineViewMode !== '2d') {
+      if (isCircleView) {
+        const avgValue = points.reduce((sum, point) => sum + point.value, 0) / points.length;
+        const accentStroke = lineColorMode === 'hsv' ? glucoseToHsvStroke(avgValue) : 'var(--spark)';
+        fragments.push(buildCCircleRibbon(lineData, accentStroke));
+      } else if (lineViewMode !== '2d') {
         fragments.push(buildPerspectiveBackdrop(lineData.floor, points));
         if (lineViewMode === '3d-roc') {
           fragments.push(buildRocGuides(points));
@@ -1066,7 +1184,12 @@
       }
 
       if (lineColorMode === 'monochrome') {
-        if (lineViewMode !== '2d') {
+        if (isCircleView) {
+          const d = points.map((point, index) =>
+            (index === 0 ? 'M ' : ' L ') + point.x.toFixed(2) + ' ' + point.y.toFixed(2)
+          ).join('');
+          fragments.push('<path d="' + d + '" fill="none" stroke="var(--spark)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"></path>');
+        } else if (lineViewMode !== '2d') {
           fragments.push(buildPerspectiveRibbon(points, 'var(--spark)'));
           const drops = points.filter((_, index) => index % 24 === 0 || index === points.length - 1).map((point) =>
             '<line x1="' + point.x.toFixed(2) + '" y1="' + point.y.toFixed(2) + '" x2="' + point.shadowX.toFixed(2) + '" y2="' + point.shadowY.toFixed(2) + '" stroke="var(--border)" stroke-width="1"></line>'
@@ -1099,7 +1222,7 @@
           '" fill="none" stroke="' + stroke + '" stroke-width="3" stroke-linecap="round"></path>'
         );
       }
-      if (lineViewMode !== '2d') {
+      if (!isCircleView && lineViewMode !== '2d') {
         const avgValue = points.reduce((sum, point) => sum + point.value, 0) / points.length;
         const accentStroke = lineColorMode === 'hsv' ? glucoseToHsvStroke(avgValue) : 'var(--spark)';
         fragments.push(buildPerspectiveRibbon(points, accentStroke));
