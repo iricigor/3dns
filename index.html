@@ -158,6 +158,19 @@
       outline-offset: 2px;
     }
 
+    .control-group input[type="range"] {
+      width: 84px;
+      accent-color: var(--accent);
+      margin: 0;
+    }
+
+    .control-group .control-value {
+      min-width: 40px;
+      text-align: right;
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
     .toggle {
       display: inline-flex;
       align-items: center;
@@ -610,6 +623,16 @@
             <option value="3d-c-circle">3D C circle</option>
           </select>
         </div>
+        <div class="control-group">
+          <label for="lineZoom">Zoom</label>
+          <input id="lineZoom" type="range" min="60" max="220" step="5" value="100" aria-label="Zoom graph line" />
+          <span id="lineZoomValue" class="control-value">100%</span>
+        </div>
+        <div class="control-group">
+          <label for="lineRotate">3D rotate</label>
+          <input id="lineRotate" type="range" min="-45" max="45" step="1" value="0" aria-label="Rotate 3D line" />
+          <span id="lineRotateValue" class="control-value">0°</span>
+        </div>
       </div>
     </section>
 
@@ -710,6 +733,11 @@
     const unitToggle = document.getElementById('unitToggle');
     const lineColorModeSelect = document.getElementById('lineColorMode');
     const lineViewModeSelect = document.getElementById('lineViewMode');
+    const lineZoomInput = document.getElementById('lineZoom');
+    const lineZoomValue = document.getElementById('lineZoomValue');
+    const lineRotateInput = document.getElementById('lineRotate');
+    const lineRotateValue = document.getElementById('lineRotateValue');
+    const sparkline = document.getElementById('sparkline');
     const heroValue = document.getElementById('heroValue');
     const heroMeta = document.getElementById('heroMeta');
     const scopeChip = document.getElementById('scopeChip');
@@ -730,11 +758,15 @@
     const unitStorageKey = '3dns.units';
     const lineColorStorageKey = '3dns.lineColorMode';
     const lineViewStorageKey = '3dns.lineViewMode';
+    const lineZoomStorageKey = '3dns.lineZoom';
+    const lineRotateStorageKey = '3dns.lineRotate';
 
     let latestModel = null;
     let glucoseUnit = 'mgdl';
     let lineColorMode = 'monochrome';
     let lineViewMode = '2d';
+    let lineZoom = 100;
+    let lineRotate = 0;
 
     function restoreStoredUrl() {
       try {
@@ -785,9 +817,23 @@
           lineViewMode = storedLineViewMode;
           lineViewModeSelect.value = storedLineViewMode;
         }
+
+        const storedLineZoom = Number.parseInt(window.localStorage.getItem(lineZoomStorageKey) || '', 10);
+        if (Number.isFinite(storedLineZoom) && storedLineZoom >= 60 && storedLineZoom <= 220) {
+          lineZoom = storedLineZoom;
+          lineZoomInput.value = String(storedLineZoom);
+        }
+
+        const storedLineRotate = Number.parseInt(window.localStorage.getItem(lineRotateStorageKey) || '', 10);
+        if (Number.isFinite(storedLineRotate) && storedLineRotate >= -45 && storedLineRotate <= 45) {
+          lineRotate = storedLineRotate;
+          lineRotateInput.value = String(storedLineRotate);
+        }
       } catch (err) {
         // Ignore storage access failures and continue without persistence.
       }
+
+      updateGraphControls();
     }
 
     function persistSetting(key, value) {
@@ -795,6 +841,28 @@
         window.localStorage.setItem(key, value);
       } catch (err) {
         // Ignore storage access failures and continue without persistence.
+      }
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function is3dView() {
+      return lineViewMode !== '2d';
+    }
+
+    function updateGraphControls() {
+      lineZoomValue.textContent = Math.round(lineZoom) + '%';
+      lineRotateValue.textContent = Math.round(lineRotate) + '°';
+      lineRotateInput.disabled = !is3dView();
+      const zoomScale = clamp(lineZoom / 100, 0.6, 2.2);
+      sparkline.style.transformOrigin = '50% 50%';
+      if (is3dView()) {
+        const rotateX = clamp(-lineRotate * 0.3, -18, 18);
+        sparkline.style.transform = 'perspective(1000px) rotateX(' + rotateX.toFixed(2) + 'deg) rotateY(' + lineRotate.toFixed(2) + 'deg) scale(' + zoomScale.toFixed(2) + ')';
+      } else {
+        sparkline.style.transform = 'scale(' + zoomScale.toFixed(2) + ')';
       }
     }
 
@@ -1165,6 +1233,7 @@
       const points = Array.isArray(lineData) ? lineData : lineData.points;
       if (!points.length) {
         sparkSegments.innerHTML = '';
+        updateGraphControls();
         return;
       }
 
@@ -1200,6 +1269,7 @@
           fragments.push('<path d="' + d + '" fill="none" stroke="var(--spark)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>');
         }
         sparkSegments.innerHTML = fragments.join('');
+        updateGraphControls();
         return;
       }
 
@@ -1231,6 +1301,7 @@
       }
       fragments.push(segments.join(''));
       sparkSegments.innerHTML = fragments.join('');
+      updateGraphControls();
     }
 
     function renderDashboard() {
@@ -1456,7 +1527,24 @@
     lineViewModeSelect.addEventListener('change', () => {
       lineViewMode = lineViewModeSelect.value;
       persistSetting(lineViewStorageKey, lineViewMode);
+      updateGraphControls();
       renderDashboard();
+    });
+
+    lineZoomInput.addEventListener('input', () => {
+      const parsedZoom = Number.parseInt(lineZoomInput.value, 10);
+      lineZoom = Number.isFinite(parsedZoom) ? clamp(parsedZoom, 60, 220) : 100;
+      lineZoomInput.value = String(lineZoom);
+      persistSetting(lineZoomStorageKey, String(lineZoom));
+      updateGraphControls();
+    });
+
+    lineRotateInput.addEventListener('input', () => {
+      const parsedRotate = Number.parseInt(lineRotateInput.value, 10);
+      lineRotate = Number.isFinite(parsedRotate) ? clamp(parsedRotate, -45, 45) : 0;
+      lineRotateInput.value = String(lineRotate);
+      persistSetting(lineRotateStorageKey, String(lineRotate));
+      updateGraphControls();
     });
 
     window.addEventListener('resize', () => {
