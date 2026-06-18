@@ -2,6 +2,8 @@
 
 A modern web application for visualizing and analyzing Continuous Glucose Monitoring (CGM) data from Nightscout. The project combines immediate 24h glucose insights with a roadmap to interactive 3D visualization for deeper trend analysis.
 
+**GitHub Pages:** [https://iricigor.github.io/3dns/](https://iricigor.github.io/3dns/)
+
 ## Current Features
 
 ### 24h CGM Dashboard
