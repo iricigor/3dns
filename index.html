@@ -125,9 +125,45 @@
 
     .controls {
       display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      width: 100%;
+      justify-content: flex-end;
+      width: auto;
+      margin-left: auto;
+    }
+
+    .icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-strong);
+      color: var(--text);
+      font-size: 20px;
+      line-height: 1;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .icon-button:hover:not([disabled]) {
+      background: var(--surface-secondary);
+    }
+
+    .icon-button .icon-glyph {
+      transform: translateY(-1px);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .control-group {
@@ -456,6 +492,7 @@
     }
 
     .spark-wrap {
+      position: relative;
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 8px;
@@ -464,10 +501,19 @@
       display: flex;
       align-items: stretch;
       transition: all 100ms ease;
+      overflow: hidden;
     }
 
     .spark-wrap:hover {
       background: var(--chip);
+    }
+
+    .spark-wrap[data-3d="true"] {
+      cursor: grab;
+    }
+
+    .spark-wrap[data-dragging="true"] {
+      cursor: grabbing;
     }
 
     .spark {
@@ -476,6 +522,143 @@
       height: 100%;
       flex: 1 1 auto;
       display: block;
+    }
+
+    .graph-controls {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: grid;
+      gap: 8px;
+      justify-items: end;
+      z-index: 1;
+      max-width: min(100%, 320px);
+    }
+
+    .graph-controls .control-group {
+      padding: 8px 10px;
+      background: color-mix(in srgb, var(--surface-strong) 92%, transparent);
+      box-shadow: var(--shadow-sm);
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .graph-controls .control-group label {
+      margin: 0;
+    }
+
+    .graph-controls .control-group select,
+    .graph-controls .control-group input[type="range"] {
+      width: 120px;
+    }
+
+    .graph-controls .control-group.is-disabled {
+      opacity: 0.65;
+    }
+
+    .graph-hint {
+      margin: 0;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--surface-strong) 92%, transparent);
+      color: var(--text-secondary);
+      font-size: 11px;
+      box-shadow: var(--shadow-sm);
+      text-align: right;
+    }
+
+    .settings-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(13, 20, 25, 0.38);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+      z-index: 20;
+    }
+
+    .settings-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: min(360px, 100%);
+      height: 100vh;
+      padding: 20px;
+      display: grid;
+      align-content: start;
+      gap: 16px;
+      background: var(--surface-strong);
+      border-left: 1px solid var(--border);
+      box-shadow: var(--shadow-lg);
+      transform: translateX(100%);
+      transition: transform 220ms ease;
+      z-index: 21;
+      overflow-y: auto;
+    }
+
+    body.settings-open .settings-backdrop {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    body.settings-open .settings-drawer {
+      transform: translateX(0);
+    }
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .settings-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .settings-close {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      padding: 0;
+    }
+
+    .settings-section {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-secondary);
+    }
+
+    .settings-section h2 {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .settings-section a {
+      color: var(--accent);
+    }
+
+    .about-meta {
+      margin: 0;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .about-copy {
+      margin: 0;
+      color: var(--text);
+      font-size: 13px;
     }
 
     .metrics {
@@ -627,6 +810,10 @@
         gap: 12px;
       }
 
+      .controls {
+        width: 100%;
+      }
+
       .panel {
         padding: 16px;
       }
@@ -640,12 +827,41 @@
         padding: 16px;
       }
 
+      .graph-controls {
+        position: static;
+        max-width: none;
+        justify-items: stretch;
+        margin-bottom: 8px;
+      }
+
+      .graph-controls .control-group {
+        justify-content: flex-start;
+      }
+
+      .graph-controls .control-group select,
+      .graph-controls .control-group input[type="range"] {
+        width: 100%;
+      }
+
+      .graph-hint {
+        text-align: left;
+      }
+
       .metric-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
       button {
         width: 100%;
+      }
+
+      button.icon-button,
+      button.settings-close {
+        width: 42px;
+      }
+
+      button.settings-close {
+        width: 36px;
       }
     }
 
@@ -680,43 +896,10 @@
         <p class="subtitle">Paste one tokenized Nightscout URL to verify reader scope and render the last 24 hours of CGM in one dashboard.</p>
       </div>
       <div class="controls">
-        <label class="toggle" for="themeToggle">
-          Theme
-          <input id="themeToggle" type="checkbox" aria-label="Toggle dark mode" />
-          <span>Dark</span>
-        </label>
-        <label class="toggle" for="unitToggle">
-          Units
-          <input id="unitToggle" type="checkbox" aria-label="Toggle mmol per liter" />
-          <span>mmol/L</span>
-        </label>
-        <div class="control-group">
-          <label for="lineColorMode">Line color</label>
-          <select id="lineColorMode" aria-label="Choose readings line color mode">
-            <option value="monochrome">Monochrome</option>
-            <option value="basic">Basic colors</option>
-            <option value="hsv">HSV spectrum</option>
-          </select>
-        </div>
-        <div class="control-group">
-          <label for="lineViewMode">Line view</label>
-          <select id="lineViewMode" aria-label="Choose readings line view mode">
-            <option value="2d">2D</option>
-            <option value="3d">3D perspective</option>
-            <option value="3d-roc">3D + rate of change</option>
-            <option value="3d-c-circle">3D C circle</option>
-          </select>
-        </div>
-        <div class="control-group">
-          <label for="lineZoom">Zoom</label>
-          <input id="lineZoom" type="range" min="60" max="220" step="5" value="100" aria-label="Zoom graph line" />
-          <span id="lineZoomValue" class="control-value">100%</span>
-        </div>
-        <div class="control-group">
-          <label for="lineRotate">3D rotate</label>
-          <input id="lineRotate" type="range" min="-45" max="45" step="1" value="0" aria-label="Rotate 3D line" />
-          <span id="lineRotateValue" class="control-value">0°</span>
-        </div>
+        <button id="settingsToggle" class="icon-button" type="button" aria-label="Open settings drawer" aria-expanded="false" aria-controls="settingsDrawer">
+          <span class="icon-glyph" aria-hidden="true">⚙</span>
+          <span class="sr-only">Settings</span>
+        </button>
       </div>
     </section>
 
@@ -752,6 +935,28 @@
           <div id="heroMeta" class="meta">Waiting for data...</div>
 
           <div class="spark-wrap">
+            <div class="graph-controls" aria-label="Graph controls">
+              <div class="control-group">
+                <label for="lineViewMode">View</label>
+                <select id="lineViewMode" aria-label="Choose readings line view mode">
+                  <option value="2d">2D</option>
+                  <option value="3d">3D perspective</option>
+                  <option value="3d-roc">3D + rate of change</option>
+                  <option value="3d-c-circle">3D C circle</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <label for="lineZoom">Zoom</label>
+                <input id="lineZoom" type="range" min="60" max="220" step="5" value="100" aria-label="Zoom graph line" />
+                <span id="lineZoomValue" class="control-value">100%</span>
+              </div>
+              <div id="graphRotateControl" class="control-group">
+                <label for="lineRotate">3D rotate</label>
+                <input id="lineRotate" type="range" min="-45" max="45" step="1" value="0" aria-label="Rotate 3D line" />
+                <span id="lineRotateValue" class="control-value">0°</span>
+              </div>
+              <p id="graphHint" class="graph-hint">Scroll to zoom. Switch to a 3D view to drag-rotate.</p>
+            </div>
             <svg id="sparkline" class="spark" viewBox="0 0 700 120" preserveAspectRatio="none" role="img" aria-label="24 hour glucose trend">
               <g id="sparkSegments"></g>
             </svg>
@@ -807,6 +1012,41 @@
     </section>
   </main>
 
+  <div id="settingsBackdrop" class="settings-backdrop" hidden></div>
+  <aside id="settingsDrawer" class="settings-drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="settingsTitle">
+    <div class="settings-header">
+      <h2 id="settingsTitle" class="settings-title">Settings</h2>
+      <button id="settingsClose" class="icon-button settings-close" type="button" aria-label="Close settings drawer">×</button>
+    </div>
+    <section class="settings-section" aria-labelledby="settingsDisplayTitle">
+      <h2 id="settingsDisplayTitle">Display</h2>
+      <label class="toggle" for="themeToggle">
+        Theme
+        <input id="themeToggle" type="checkbox" aria-label="Toggle dark mode" />
+        <span>Dark</span>
+      </label>
+      <label class="toggle" for="unitToggle">
+        Units
+        <input id="unitToggle" type="checkbox" aria-label="Toggle mmol per liter" />
+        <span>mmol/L</span>
+      </label>
+      <div class="control-group">
+        <label for="lineColorMode">Line color</label>
+        <select id="lineColorMode" aria-label="Choose readings line color mode">
+          <option value="monochrome">Monochrome</option>
+          <option value="basic">Basic colors</option>
+          <option value="hsv">HSV spectrum</option>
+        </select>
+      </div>
+    </section>
+    <section class="settings-section" aria-labelledby="settingsAboutTitle">
+      <h2 id="settingsAboutTitle">About</h2>
+      <p class="about-meta">Updated: 2026-06-18 19:51 UTC</p>
+      <p class="about-copy">Moved header settings into this cog-triggered drawer and placed the graph view, zoom, and 3D rotation controls directly on the chart. Mouse wheel now zooms the graph, and drag rotation is available in 3D views.</p>
+      <p class="about-copy">Last PR: <a href="https://github.com/iricigor/3dns/pull/19" target="_blank" rel="noreferrer">#19 — Add explicit PR issue-closing guidance for Copilot</a></p>
+    </section>
+  </aside>
+
   <script>
     const form = document.getElementById('verify-form');
     const button = document.getElementById('verify-btn');
@@ -821,6 +1061,13 @@
     const lineZoomValue = document.getElementById('lineZoomValue');
     const lineRotateInput = document.getElementById('lineRotate');
     const lineRotateValue = document.getElementById('lineRotateValue');
+    const graphRotateControl = document.getElementById('graphRotateControl');
+    const graphHint = document.getElementById('graphHint');
+    const settingsToggle = document.getElementById('settingsToggle');
+    const settingsClose = document.getElementById('settingsClose');
+    const settingsDrawer = document.getElementById('settingsDrawer');
+    const settingsBackdrop = document.getElementById('settingsBackdrop');
+    const sparkWrap = document.querySelector('.spark-wrap');
     const sparkline = document.getElementById('sparkline');
     const heroValue = document.getElementById('heroValue');
     const heroMeta = document.getElementById('heroMeta');
@@ -852,6 +1099,7 @@
     let lineViewMode = '2d';
     let lineZoom = 100;
     let lineRotate = 0;
+    let graphDragState = null;
 
     function restoreStoredUrl() {
       try {
@@ -937,16 +1185,61 @@
       return lineViewMode !== '2d';
     }
 
+    function setSettingsDrawerOpen(isOpen) {
+      document.body.classList.toggle('settings-open', isOpen);
+      settingsToggle.setAttribute('aria-expanded', String(isOpen));
+      settingsDrawer.setAttribute('aria-hidden', String(!isOpen));
+      settingsBackdrop.hidden = !isOpen;
+    }
+
+    function setLineZoom(nextZoom, persistValue) {
+      lineZoom = clamp(Number.isFinite(nextZoom) ? nextZoom : 100, 60, 220);
+      lineZoomInput.value = String(lineZoom);
+      if (persistValue) {
+        persistSetting(lineZoomStorageKey, String(lineZoom));
+      }
+      updateGraphControls();
+    }
+
+    function setLineRotate(nextRotate, persistValue) {
+      lineRotate = clamp(Number.isFinite(nextRotate) ? nextRotate : 0, -45, 45);
+      lineRotateInput.value = String(lineRotate);
+      if (persistValue) {
+        persistSetting(lineRotateStorageKey, String(lineRotate));
+      }
+      updateGraphControls();
+    }
+
+    function stopGraphDrag(shouldPersist) {
+      if (!graphDragState) {
+        return;
+      }
+
+      if (shouldPersist) {
+        persistSetting(lineRotateStorageKey, String(lineRotate));
+      }
+
+      sparkWrap.dataset.dragging = 'false';
+      graphDragState = null;
+    }
+
     function updateGraphControls() {
       lineZoomValue.textContent = Math.round(lineZoom) + '%';
       lineRotateValue.textContent = Math.round(lineRotate) + '°';
       lineRotateInput.disabled = !is3dView();
+      graphRotateControl.classList.toggle('is-disabled', !is3dView());
+      sparkWrap.dataset.dragging = graphDragState ? 'true' : 'false';
+      sparkWrap.setAttribute('data-3d', String(is3dView()));
+      graphHint.textContent = is3dView()
+        ? 'Scroll to zoom. Drag the graph to rotate.'
+        : 'Scroll to zoom. Switch to a 3D view to drag-rotate.';
       const zoomScale = clamp(lineZoom / 100, 0.6, 2.2);
       sparkline.style.transformOrigin = '50% 50%';
       if (is3dView()) {
         const rotateX = clamp(-lineRotate * 0.3, -18, 18);
         sparkline.style.transform = 'perspective(1000px) rotateX(' + rotateX.toFixed(2) + 'deg) rotateY(' + lineRotate.toFixed(2) + 'deg) scale(' + zoomScale.toFixed(2) + ')';
       } else {
+        stopGraphDrag(false);
         sparkline.style.transform = 'scale(' + zoomScale.toFixed(2) + ')';
       }
     }
@@ -1625,18 +1918,80 @@
 
     lineZoomInput.addEventListener('input', () => {
       const parsedZoom = Number.parseInt(lineZoomInput.value, 10);
-      lineZoom = Number.isFinite(parsedZoom) ? clamp(parsedZoom, 60, 220) : 100;
-      lineZoomInput.value = String(lineZoom);
-      persistSetting(lineZoomStorageKey, String(lineZoom));
-      updateGraphControls();
+      setLineZoom(parsedZoom, true);
     });
 
     lineRotateInput.addEventListener('input', () => {
       const parsedRotate = Number.parseInt(lineRotateInput.value, 10);
-      lineRotate = Number.isFinite(parsedRotate) ? clamp(parsedRotate, -45, 45) : 0;
-      lineRotateInput.value = String(lineRotate);
-      persistSetting(lineRotateStorageKey, String(lineRotate));
-      updateGraphControls();
+      setLineRotate(parsedRotate, true);
+    });
+
+    settingsToggle.addEventListener('click', () => {
+      setSettingsDrawerOpen(!document.body.classList.contains('settings-open'));
+    });
+
+    settingsClose.addEventListener('click', () => {
+      setSettingsDrawerOpen(false);
+      settingsToggle.focus();
+    });
+
+    settingsBackdrop.addEventListener('click', () => {
+      setSettingsDrawerOpen(false);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && document.body.classList.contains('settings-open')) {
+        setSettingsDrawerOpen(false);
+        settingsToggle.focus();
+      }
+    });
+
+    sparkWrap.addEventListener('wheel', (event) => {
+      if (event.target.closest('.graph-controls')) {
+        return;
+      }
+
+      event.preventDefault();
+      const delta = event.deltaY < 0 ? 5 : -5;
+      setLineZoom(Math.round((lineZoom + delta) / 5) * 5, true);
+    }, { passive: false });
+
+    sparkWrap.addEventListener('pointerdown', (event) => {
+      if (!is3dView() || event.button !== 0 || event.target.closest('.graph-controls')) {
+        return;
+      }
+
+      graphDragState = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startRotate: lineRotate
+      };
+      sparkWrap.dataset.dragging = 'true';
+      if (sparkWrap.setPointerCapture) {
+        sparkWrap.setPointerCapture(event.pointerId);
+      }
+      event.preventDefault();
+    });
+
+    sparkWrap.addEventListener('pointermove', (event) => {
+      if (!graphDragState || event.pointerId !== graphDragState.pointerId) {
+        return;
+      }
+
+      const deltaX = event.clientX - graphDragState.startX;
+      setLineRotate(Math.round(graphDragState.startRotate + deltaX * 0.25), false);
+    });
+
+    sparkWrap.addEventListener('pointerup', (event) => {
+      if (!graphDragState || event.pointerId !== graphDragState.pointerId) {
+        return;
+      }
+
+      stopGraphDrag(true);
+    });
+
+    sparkWrap.addEventListener('pointercancel', () => {
+      stopGraphDrag(true);
     });
 
     window.addEventListener('resize', () => {
