@@ -1215,6 +1215,16 @@
         return;
       }
 
+      if (sparkWrap.releasePointerCapture) {
+        try {
+          if (!sparkWrap.hasPointerCapture || sparkWrap.hasPointerCapture(graphDragState.pointerId)) {
+            sparkWrap.releasePointerCapture(graphDragState.pointerId);
+          }
+        } catch (err) {
+          // Ignore pointer-capture cleanup failures and finish the drag state reset.
+        }
+      }
+
       if (shouldPersist) {
         persistSetting(lineRotateStorageKey, String(lineRotate));
       }
@@ -1968,7 +1978,11 @@
       };
       sparkWrap.dataset.dragging = 'true';
       if (sparkWrap.setPointerCapture) {
-        sparkWrap.setPointerCapture(event.pointerId);
+        try {
+          sparkWrap.setPointerCapture(event.pointerId);
+        } catch (err) {
+          // Ignore pointer-capture failures and keep drag rotation available.
+        }
       }
       event.preventDefault();
     });
