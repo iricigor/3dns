@@ -109,7 +109,7 @@
 
     .header-copy {
       min-width: 0;
-      flex: 1 1 100%;
+      flex: 1 1 auto;
     }
 
     .subtitle {
@@ -126,6 +126,8 @@
     .controls {
       display: flex;
       justify-content: flex-end;
+      align-self: flex-start;
+      flex: 0 0 auto;
       width: auto;
       margin-left: auto;
     }
@@ -575,17 +577,18 @@
       position: absolute;
       top: 12px;
       right: 12px;
-      display: grid;
-      gap: 8px;
-      justify-items: end;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
       z-index: 1;
-      max-width: min(100%, 320px);
+      max-width: calc(100% - 24px);
     }
 
     .graph-controls .control-group {
-      padding: 8px 10px;
-      background: color-mix(in srgb, var(--surface-strong) 92%, transparent);
-      box-shadow: var(--shadow-sm);
+      padding: 0;
+      background: none;
+      border: none;
+      box-shadow: none;
       flex-wrap: wrap;
       justify-content: flex-end;
     }
@@ -601,18 +604,6 @@
 
     .graph-controls .control-group.is-disabled {
       opacity: 0.65;
-    }
-
-    .graph-hint {
-      margin: 0;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: color-mix(in srgb, var(--surface-strong) 92%, transparent);
-      color: var(--text-secondary);
-      font-size: 11px;
-      box-shadow: var(--shadow-sm);
-      text-align: right;
     }
 
     .settings-backdrop {
@@ -877,7 +868,8 @@
       .graph-controls {
         position: static;
         max-width: none;
-        justify-items: stretch;
+        justify-content: flex-end;
+        flex-wrap: wrap;
         margin-bottom: 8px;
       }
 
@@ -885,13 +877,8 @@
         justify-content: flex-start;
       }
 
-      .graph-controls .control-group select,
       .graph-controls .control-group input[type="range"] {
-        width: 100%;
-      }
-
-      .graph-hint {
-        text-align: left;
+        width: 84px;
       }
 
       .metric-grid {
@@ -990,15 +977,6 @@
           <div class="spark-wrap">
             <div class="graph-controls" aria-label="Graph controls">
               <div class="control-group">
-                <label for="lineViewMode">View</label>
-                <select id="lineViewMode" aria-label="Choose readings line view mode">
-                  <option value="2d">2D</option>
-                  <option value="3d">3D perspective</option>
-                  <option value="3d-roc">3D + rate of change</option>
-                  <option value="3d-c-circle">3D C circle</option>
-                </select>
-              </div>
-              <div class="control-group">
                 <label for="lineZoom">Zoom</label>
                 <input id="lineZoom" type="range" min="60" max="220" step="5" value="100" aria-label="Zoom graph line" />
                 <span id="lineZoomValue" class="control-value">100%</span>
@@ -1008,7 +986,6 @@
                 <input id="lineRotate" type="range" min="-45" max="45" step="1" value="0" aria-label="Rotate 3D line" />
                 <span id="lineRotateValue" class="control-value">0°</span>
               </div>
-              <p id="graphHint" class="graph-hint">Scroll to zoom. Switch to a 3D view to drag-rotate.</p>
             </div>
             <svg id="sparkline" class="spark" viewBox="0 0 700 120" preserveAspectRatio="none" role="img" aria-label="24 hour glucose trend">
               <g id="sparkSegments"></g>
@@ -1084,6 +1061,15 @@
         <span>mmol/L</span>
       </label>
       <div class="control-group">
+        <label for="lineViewMode">Line view</label>
+        <select id="lineViewMode" aria-label="Choose readings line view mode">
+          <option value="2d">2D</option>
+          <option value="3d">3D perspective</option>
+          <option value="3d-roc">3D + rate of change</option>
+          <option value="3d-c-circle">3D C circle</option>
+        </select>
+      </div>
+      <div class="control-group">
         <label for="lineColorMode">Line color</label>
         <select id="lineColorMode" aria-label="Choose readings line color mode">
           <option value="monochrome">Monochrome</option>
@@ -1094,9 +1080,9 @@
     </section>
     <section class="settings-section" aria-labelledby="settingsAboutTitle">
       <h2 id="settingsAboutTitle">About</h2>
-      <p class="about-meta">Updated: 2026-06-18 20:03 UTC</p>
-      <p class="about-copy">Moved the verified Nightscout status into a green checked button inside the URL field so the full verification details now live in the control tooltip instead of the visible status panel.</p>
-      <p class="about-copy">Last PR: <a href="https://github.com/iricigor/3dns/pull/19" target="_blank" rel="noreferrer">#19 — Add explicit PR issue-closing guidance for Copilot</a></p>
+      <p class="about-meta">Updated: 2026-06-18 20:14 UTC</p>
+      <p class="about-copy">Aligned the settings cog with the page title, moved line view into the settings drawer, and simplified the graph overlay to paired zoom and 3D rotate sliders.</p>
+      <p class="about-copy">Last PR: <a href="https://github.com/iricigor/3dns/pull/22" target="_blank" rel="noreferrer">#22 — Render verified Nightscout status as inline check button</a></p>
     </section>
   </aside>
 
@@ -1116,7 +1102,6 @@
     const lineRotateInput = document.getElementById('lineRotate');
     const lineRotateValue = document.getElementById('lineRotateValue');
     const graphRotateControl = document.getElementById('graphRotateControl');
-    const graphHint = document.getElementById('graphHint');
     const settingsToggle = document.getElementById('settingsToggle');
     const settingsClose = document.getElementById('settingsClose');
     const settingsDrawer = document.getElementById('settingsDrawer');
@@ -1294,9 +1279,6 @@
       graphRotateControl.classList.toggle('is-disabled', !is3dView());
       sparkWrap.dataset.dragging = graphDragState ? 'true' : 'false';
       sparkWrap.setAttribute('data-3d', String(is3dView()));
-      graphHint.textContent = is3dView()
-        ? 'Scroll to zoom. Drag the graph to rotate.'
-        : 'Scroll to zoom. Switch to a 3D view to drag-rotate.';
       const zoomScale = clamp(lineZoom / 100, 0.6, 2.2);
       sparkline.style.transformOrigin = '50% 50%';
       if (is3dView()) {
