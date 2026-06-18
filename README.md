@@ -25,7 +25,7 @@ All views use the same CGM data. They just show it in different shapes so you ca
 - **2D**: A classic line chart. Easy for quick checks of highs, lows, and overall direction.
 - **3D perspective**: The same glucose line, tilted for depth, so rises and drops stand out more visually.
 - **3D + rate of change**: Adds a second visual cue for speed of change, helping you quickly see where glucose is moving fast.
-- **3D mountain**: Adds left/right crossbars to each 3D point; their angle shows the smoothed 15-minute rate of change, while longer bars mark steadier movement.
+- **3D mountain**: Adds left/right side lines to each 3D point; rising values render peak-shaped guides, falling values render valley-shaped guides, and steadier movement keeps guides longer.
 - **3D C circle**: Wraps the 24-hour day into an open circle, so you can compare morning, afternoon, evening, and night patterns in one glance.
 
 ### Security
