@@ -17,6 +17,15 @@ A modern web application for visualizing and analyzing Continuous Glucose Monito
 - **Unit conversion**: mg/dL ↔ mmol/L with live conversion
 - **Responsive design** optimized for desktop and mobile
 
+### Understanding the line views (for people with diabetes)
+
+All views use the same CGM data. They just show it in different shapes so you can spot patterns faster.
+
+- **2D**: A classic line chart. Easy for quick checks of highs, lows, and overall direction.
+- **3D perspective**: The same glucose line, tilted for depth, so rises and drops stand out more visually.
+- **3D + rate of change**: Adds a second visual cue for speed of change, helping you quickly see where glucose is moving fast.
+- **3D C circle**: Wraps the 24-hour day into an open circle, so you can compare morning, afternoon, evening, and night patterns in one glance.
+
 ### Security
 - Reader-scope validation ensures API token has read-only privileges
 - Safe token capability probing (DELETE probe on non-existent records)
@@ -202,6 +211,7 @@ Contributions welcome! Please:
 - [Microsoft Fluent Design System](https://www.microsoft.com/design/fluent)
 - [Three.js Documentation](https://threejs.org/docs/)
 - [MDN Web Docs](https://developer.mozilla.org/)
+- [Favicon source SVG (from previous PR)](https://github.com/iricigor/GlookoDataWebApp/blob/main/public/favicon/favicon.svg)
 
 ## License
 
