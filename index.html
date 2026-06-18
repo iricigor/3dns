@@ -338,7 +338,7 @@
 
     .dashboard {
       display: grid;
-      grid-template-columns: 1.6fr 1fr;
+      grid-template-columns: 1fr;
       gap: 16px;
       align-items: stretch;
       padding: 20px;
@@ -350,9 +350,9 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       background: var(--surface-strong);
-      padding: 16px;
+      padding: 14px;
       display: grid;
-      gap: 12px;
+      gap: 8px;
       transition: all 140ms ease;
     }
 
@@ -393,7 +393,7 @@
       font-size: clamp(2rem, 6vw, 3.5rem);
       font-weight: 700;
       line-height: 1;
-      margin: 4px 0;
+      margin: 0;
     }
 
     .meta {
@@ -408,6 +408,9 @@
       border-radius: 8px;
       padding: 8px;
       background: var(--surface-secondary);
+      min-height: 420px;
+      display: flex;
+      align-items: stretch;
       transition: all 100ms ease;
     }
 
@@ -417,24 +420,17 @@
 
     .spark {
       width: 100%;
-      height: 140px;
+      min-height: 420px;
+      height: 100%;
+      flex: 1 1 auto;
       display: block;
     }
 
     .metrics {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--surface-strong);
-      padding: 16px;
+      padding: 0;
       display: grid;
-      gap: 12px;
+      gap: 10px;
       align-content: start;
-      transition: all 140ms ease;
-    }
-
-    .metrics:hover {
-      box-shadow: var(--shadow-sm);
-      border-color: var(--text-secondary);
     }
 
     .metrics h3 {
@@ -448,15 +444,17 @@
 
     .metric-grid {
       display: grid;
-      gap: 8px;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 10px;
     }
 
     .metric {
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 12px;
+      padding: 10px 12px;
       background: var(--chip);
       transition: all 100ms ease;
+      min-width: 0;
     }
 
     .metric:hover {
@@ -475,29 +473,30 @@
     .metric-value {
       margin-top: 4px;
       font-weight: 700;
-      font-size: 16px;
+      font-size: clamp(0.95rem, 1.5vw, 1.1rem);
       color: var(--text);
+      white-space: nowrap;
     }
 
-    .range-bars {
-      display: grid;
-      gap: 8px;
-      margin-top: 4px;
-    }
-
-    .bar-row {
-      display: grid;
-      grid-template-columns: 48px 1fr auto;
-      gap: 8px;
+    .metric-range .metric-value {
+      display: flex;
       align-items: center;
-      font-size: 11px;
-      font-weight: 500;
+      gap: 8px;
     }
 
-    .bar-row > span:first-child {
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
+    .bar-dot {
+      width: 12px;
+      min-width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: transparent;
+      overflow: visible;
+    }
+
+    .bar-dot > span {
+      width: 100% !important;
+      height: 100%;
+      border-radius: 999px;
     }
 
     .bar {
@@ -514,10 +513,10 @@
       transition: width 400ms ease;
     }
 
-    .bar-row strong {
-      color: var(--text-secondary);
-      min-width: 32px;
-      text-align: right;
+    .range-pct {
+      color: var(--text);
+      font-size: inherit;
+      font-weight: 700;
     }
 
     .mono {
@@ -550,21 +549,16 @@
       }
 
       .dashboard {
-        grid-template-columns: 1fr;
         gap: 12px;
         padding: 16px;
       }
 
-      .bar-row {
-        grid-template-columns: 44px 1fr auto;
+      .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
       button {
         width: 100%;
-      }
-
-      .spark {
-        height: 110px;
       }
     }
 
@@ -572,13 +566,11 @@
       .app {
         max-width: 1760px;
       }
+    }
 
-      .dashboard {
-        grid-template-columns: 1.9fr 1fr;
-      }
-
-      .spark {
-        height: 180px;
+    @media (min-width: 801px) and (max-width: 1180px) {
+      .metric-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
       }
     }
   </style>
@@ -678,23 +670,29 @@
               <div class="metric-label">Data Points</div>
               <div id="pointCount" class="metric-value">--</div>
             </div>
-          </div>
 
-          <div class="range-bars">
-            <div class="bar-row">
-              <span>Low</span>
-              <div class="bar"><span id="lowBar" style="background: var(--low); width: 0%"></span></div>
-              <strong id="lowPct">0%</strong>
+            <div class="metric metric-range">
+              <div class="metric-label">Low</div>
+              <div class="metric-value">
+                <span class="bar bar-dot"><span id="lowBar" style="background: var(--low); width: 0%"></span></span>
+                <strong id="lowPct" class="range-pct">0%</strong>
+              </div>
             </div>
-            <div class="bar-row">
-              <span>Target</span>
-              <div class="bar"><span id="targetBar" style="background: var(--in-range); width: 0%"></span></div>
-              <strong id="targetPct">0%</strong>
+
+            <div class="metric metric-range">
+              <div class="metric-label">Target</div>
+              <div class="metric-value">
+                <span class="bar bar-dot"><span id="targetBar" style="background: var(--in-range); width: 0%"></span></span>
+                <strong id="targetPct" class="range-pct">0%</strong>
+              </div>
             </div>
-            <div class="bar-row">
-              <span>High</span>
-              <div class="bar"><span id="highBar" style="background: var(--high); width: 0%"></span></div>
-              <strong id="highPct">0%</strong>
+
+            <div class="metric metric-range">
+              <div class="metric-label">High</div>
+              <div class="metric-value">
+                <span class="bar bar-dot"><span id="highBar" style="background: var(--high); width: 0%"></span></span>
+                <strong id="highPct" class="range-pct">0%</strong>
+              </div>
             </div>
           </div>
         </aside>
@@ -1459,6 +1457,12 @@
       lineViewMode = lineViewModeSelect.value;
       persistSetting(lineViewStorageKey, lineViewMode);
       renderDashboard();
+    });
+
+    window.addEventListener('resize', () => {
+      if (latestModel) {
+        renderDashboard();
+      }
     });
 
     restoreStoredUrl();
