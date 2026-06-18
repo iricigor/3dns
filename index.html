@@ -1066,6 +1066,7 @@
           <option value="2d">2D</option>
           <option value="3d">3D perspective</option>
           <option value="3d-roc">3D + rate of change</option>
+          <option value="3d-mountain">3D mountain</option>
           <option value="3d-c-circle">3D C circle</option>
         </select>
       </div>
@@ -1080,9 +1081,9 @@
     </section>
     <section class="settings-section" aria-labelledby="settingsAboutTitle">
       <h2 id="settingsAboutTitle">About</h2>
-      <p class="about-meta">Updated: 2026-06-18 20:14 UTC</p>
-      <p class="about-copy">Aligned the settings cog with the page title, moved line view into the settings drawer, and simplified the graph overlay to paired zoom and 3D rotate sliders.</p>
-      <p class="about-copy">Last PR: <a href="https://github.com/iricigor/3dns/pull/22" target="_blank" rel="noreferrer">#22 — Render verified Nightscout status as inline check button</a></p>
+      <p class="about-meta">Updated: 2026-06-18 20:27 UTC</p>
+      <p class="about-copy">Added a 3D mountain line view that reuses the perspective chart and adds 15-minute ROC crossbars whose angle shows direction while stable sections stay longer.</p>
+      <p class="about-copy">Last PR: <a href="https://github.com/iricigor/3dns/pull/27" target="_blank" rel="noreferrer">#27 — Harden PR workflow for issue-closing references</a></p>
     </section>
   </aside>
 
@@ -1185,7 +1186,7 @@
         }
 
         const storedLineViewMode = window.localStorage.getItem(lineViewStorageKey);
-        if (storedLineViewMode === '2d' || storedLineViewMode === '3d' || storedLineViewMode === '3d-roc' || storedLineViewMode === '3d-c-circle') {
+        if (storedLineViewMode === '2d' || storedLineViewMode === '3d' || storedLineViewMode === '3d-roc' || storedLineViewMode === '3d-mountain' || storedLineViewMode === '3d-c-circle') {
           lineViewMode = storedLineViewMode;
           lineViewModeSelect.value = storedLineViewMode;
         }
@@ -1431,7 +1432,24 @@
         const lookbackIndex = Math.max(0, index - rocLookback);
         return value - values[lookbackIndex];
       });
+      const stabilityDiffs = deltas.map((delta, index) => {
+        const start = Math.max(0, index - rocLookback);
+        const end = Math.min(deltas.length - 1, index + rocLookback);
+        let totalDiff = 0;
+        let sampleCount = 0;
+
+        for (let sampleIndex = start; sampleIndex <= end; sampleIndex += 1) {
+          if (sampleIndex === index) {
+            continue;
+          }
+          totalDiff += Math.abs(delta - deltas[sampleIndex]);
+          sampleCount += 1;
+        }
+
+        return sampleCount ? totalDiff / sampleCount : 0;
+      });
       const maxAbsDelta = Math.max(...deltas.map((delta) => Math.abs(delta)), 1);
+      const maxStabilityDiff = Math.max(...stabilityDiffs, 1);
       const backLeft = { x: 112, y: 44 };
       const backRight = { x: 590, y: 44 };
       const frontLeft = { x: 30, y: 122 };
@@ -1450,8 +1468,13 @@
         const floorY = floorLeftY + (floorRightY - floorLeftY) * ratio;
         const normalized = (values[i] - minV) / range;
         const deltaRatio = Math.max(-1, Math.min(1, deltas[i] / maxAbsDelta));
+        const stabilityRatio = 1 - Math.min(1, stabilityDiffs[i] / maxStabilityDiff);
         const rocOffset = useRocDimension ? deltaRatio * (36 - ratio * 14) : 0;
         const lineX = useRocDimension ? floorX + rocOffset * 0.42 : floorX;
+        const mountainHalfLength = (4.5 + stabilityRatio * 8.5) * (1 - ratio * 0.18);
+        const mountainAngle = (deltaRatio * 45 * Math.PI) / 180;
+        const mountainDx = Math.cos(mountainAngle) * mountainHalfLength;
+        const mountainDy = Math.sin(mountainAngle) * mountainHalfLength;
         points.push({
           x: lineX,
           y: floorY - normalized * 78,
@@ -1463,6 +1486,11 @@
           rocFloorY: floorY - 6,
           rocOffset,
           delta: deltas[i],
+          mountainLeftX: lineX - mountainDx,
+          mountainLeftY: floorY - normalized * 78 + mountainDy,
+          mountainRightX: lineX + mountainDx,
+          mountainRightY: floorY - normalized * 78 - mountainDy,
+          stabilityRatio,
           value: values[i]
         });
       }
@@ -1636,6 +1664,12 @@
       ].join('');
     }
 
+    function buildMountainGuides(points, stroke) {
+      return points.map((point) =>
+        '<line x1="' + point.mountainLeftX.toFixed(2) + '" y1="' + point.mountainLeftY.toFixed(2) + '" x2="' + point.mountainRightX.toFixed(2) + '" y2="' + point.mountainRightY.toFixed(2) + '" stroke="' + stroke + '" stroke-width="' + (0.9 + point.stabilityRatio * 0.9).toFixed(2) + '" stroke-linecap="round" stroke-opacity="0.75"></line>'
+      ).join('');
+    }
+
     function buildCCircleRibbon(lineData, stroke) {
       const polygonPoints = lineData.outerPoints
         .concat(lineData.innerPoints.slice().reverse())
@@ -1707,6 +1741,9 @@
           fragments.push('<path d="' + d + '" fill="none" stroke="var(--spark)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"></path>');
         } else if (lineViewMode !== '2d') {
           fragments.push(buildPerspectiveRibbon(points, 'var(--spark)'));
+          if (lineViewMode === '3d-mountain') {
+            fragments.push(buildMountainGuides(points, 'var(--spark)'));
+          }
           const drops = points.filter((_, index) => index % 24 === 0 || index === points.length - 1).map((point) =>
             '<line x1="' + point.x.toFixed(2) + '" y1="' + point.y.toFixed(2) + '" x2="' + point.shadowX.toFixed(2) + '" y2="' + point.shadowY.toFixed(2) + '" stroke="var(--border)" stroke-width="1"></line>'
           );
@@ -1743,6 +1780,9 @@
         const avgValue = points.reduce((sum, point) => sum + point.value, 0) / points.length;
         const accentStroke = lineColorMode === 'hsv' ? glucoseToHsvStroke(avgValue) : 'var(--spark)';
         fragments.push(buildPerspectiveRibbon(points, accentStroke));
+        if (lineViewMode === '3d-mountain') {
+          fragments.push(buildMountainGuides(points, accentStroke));
+        }
         const drops = points.filter((_, index) => index % 24 === 0 || index === points.length - 1).map((point) =>
           '<line x1="' + point.x.toFixed(2) + '" y1="' + point.y.toFixed(2) + '" x2="' + point.shadowX.toFixed(2) + '" y2="' + point.shadowY.toFixed(2) + '" stroke="var(--border)" stroke-width="1"></line>'
         );
