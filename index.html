@@ -92,6 +92,7 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
+      flex-wrap: wrap;
       gap: 16px;
       padding: 20px;
       background: var(--surface-secondary);
@@ -106,18 +107,27 @@
       color: var(--text);
     }
 
+    .header-copy {
+      min-width: 0;
+      flex: 1 1 100%;
+    }
+
     .subtitle {
       margin: 6px 0 0;
       color: var(--text-secondary);
       font-size: 12px;
       line-height: 1.4;
-      max-width: 52ch;
+      max-width: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .controls {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+      width: 100%;
     }
 
     .control-group {
@@ -233,6 +243,15 @@
       letter-spacing: 0.5px;
     }
 
+    .input-label {
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
     input[type="url"] {
       width: 100%;
       padding: 10px 12px;
@@ -259,13 +278,6 @@
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 8px;
-    }
-
-    .hint {
-      margin: 4px 0 0;
-      color: var(--text-secondary);
-      font-size: 12px;
-      line-height: 1.4;
     }
 
     button {
@@ -316,6 +328,33 @@
       font-weight: 600;
       margin-bottom: 4px;
       color: var(--text);
+    }
+
+    .status-detail {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--ok);
+      background: rgba(16, 124, 16, 0.08);
+      color: var(--ok);
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .status-chip::before {
+      content: '✓';
+      font-size: 12px;
+      line-height: 1;
     }
 
     .status.ok {
@@ -578,9 +617,9 @@
 <body data-theme="light">
   <main class="app">
     <section class="header">
-      <div>
+      <div class="header-copy">
         <h1 class="title">Nightscout 24h CGM Viewer</h1>
-        <p class="subtitle">Paste one Nightscout URL containing a token to verify reader scope and render the last 24 hours of CGM in one central dashboard.</p>
+        <p class="subtitle">Paste one tokenized Nightscout URL to verify reader scope and render the last 24 hours of CGM in one dashboard.</p>
       </div>
       <div class="controls">
         <label class="toggle" for="themeToggle">
@@ -615,7 +654,7 @@
 
     <section class="panel">
       <div>
-        <label for="nightscoutUrl">Nightscout URL (must include token)</label>
+        <label for="nightscoutUrl" class="input-label">Nightscout URL with token - root or entries API URL accepted.</label>
         <form id="verify-form" class="input-row">
           <input
             id="nightscoutUrl"
@@ -626,19 +665,20 @@
           />
           <button id="verify-btn" type="submit">Load 24h Data</button>
         </form>
-        <p class="hint">Accepted forms: root or entries API URL, as long as it includes ?token=...</p>
       </div>
 
       <section class="status" id="status" aria-live="polite" role="status">
         <div class="status-title">Status: waiting for input</div>
-        <div>Enter details above to test connectivity.</div>
+        <div class="status-detail">
+          <span class="status-message">Enter details above to test connectivity.</span>
+          <span id="statusScope" class="status-chip hidden"></span>
+        </div>
       </section>
 
       <section id="dashboard" class="dashboard hidden">
         <article class="hero">
           <div class="hero-top">
             <h2>Latest Glucose</h2>
-            <span id="scopeChip" class="chip">token scope: unknown</span>
           </div>
           <div id="heroValue" class="value">--</div>
           <div id="heroMeta" class="meta">Waiting for data...</div>
@@ -712,7 +752,8 @@
     const lineViewModeSelect = document.getElementById('lineViewMode');
     const heroValue = document.getElementById('heroValue');
     const heroMeta = document.getElementById('heroMeta');
-    const scopeChip = document.getElementById('scopeChip');
+    const statusMessageEl = statusEl.querySelector('.status-message');
+    const statusScopeEl = document.getElementById('statusScope');
     const avgValue = document.getElementById('avgValue');
     const minValue = document.getElementById('minValue');
     const maxValue = document.getElementById('maxValue');
@@ -816,11 +857,20 @@
       };
     }
 
-    function setStatus(title, message, kind) {
+    function setStatus(title, message, kind, scopeLabel) {
       statusEl.className = 'status' + (kind ? ' ' + kind : '');
       const titleEl = statusEl.querySelector('.status-title');
       titleEl.textContent = title;
-      statusEl.lastElementChild.textContent = message;
+      statusMessageEl.textContent = message;
+      if (scopeLabel) {
+        statusScopeEl.textContent = scopeLabel;
+        statusScopeEl.title = scopeLabel;
+        statusScopeEl.classList.remove('hidden');
+      } else {
+        statusScopeEl.textContent = '';
+        statusScopeEl.removeAttribute('title');
+        statusScopeEl.classList.add('hidden');
+      }
     }
 
     function formatTimestamp(entry) {
@@ -1252,8 +1302,6 @@
       heroValue.textContent = toDisplayGlucose(Number(latest.sgv));
       heroValue.style.color = zone === 'low' ? 'var(--low)' : zone === 'high' ? 'var(--high)' : 'var(--in-range)';
       heroMeta.textContent = (latest.direction || 'unknown') + ' | ' + formatTimestamp(latest);
-      scopeChip.textContent = 'token scope: ' + latestModel.tokenScopeLabel;
-
       avgValue.textContent = toDisplayNumber(avg) + (glucoseUnit === 'mmol' ? ' mmol/L' : ' mg/dL');
       minValue.textContent = toDisplayGlucose(min);
       maxValue.textContent = toDisplayGlucose(max);
@@ -1412,7 +1460,7 @@
           entries,
           latest,
           endpoint: endpoint.toString(),
-          tokenScopeLabel: tokenProbe.state === 'reader' ? 'reader-only confirmed' : 'unknown'
+          tokenScopeLabel: tokenProbe.state === 'reader' ? 'token scope: reader-only confirmed' : ''
         };
 
         renderDashboard();
@@ -1420,7 +1468,7 @@
         if (tokenProbe.state === 'unknown') {
           setStatus('Status: verified', 'Data loaded. Reader scope could not be conclusively determined: ' + tokenProbe.detail, 'ok');
         } else {
-          setStatus('Status: verified', 'Reader token verified and 24h CGM data loaded successfully.', 'ok');
+          setStatus('Status: verified', 'Reader token verified and 24h CGM data loaded successfully.', 'ok', latestModel.tokenScopeLabel);
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
