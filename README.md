@@ -9,7 +9,7 @@ A modern web application for visualizing and analyzing Continuous Glucose Monito
 ### 24h CGM Dashboard
 - **Real-time glucose display** with trend direction and timestamp
 - **24-hour sparkline chart** showing glucose trajectory
-- **Selectable line views**: 2D, 3D perspective, 3D + rate of change, and 3D C circle
+- **Selectable line views**: 2D, 3D perspective, 3D + rate of change, 3D mountain, and 3D C circle
 - **Interactive graph controls**: zoom in/out and 3D rotation slider for line inspection
 - **Summary metrics**: average, minimum, maximum, and data point count
 - **Time-in-range analysis**: percentage breakdown for low, target, and high glucose zones
@@ -25,6 +25,7 @@ All views use the same CGM data. They just show it in different shapes so you ca
 - **2D**: A classic line chart. Easy for quick checks of highs, lows, and overall direction.
 - **3D perspective**: The same glucose line, tilted for depth, so rises and drops stand out more visually.
 - **3D + rate of change**: Adds a second visual cue for speed of change, helping you quickly see where glucose is moving fast.
+- **3D mountain**: Adds left/right crossbars to each 3D point; their angle shows the smoothed 15-minute rate of change, while longer bars mark steadier movement.
 - **3D C circle**: Wraps the 24-hour day into an open circle, so you can compare morning, afternoon, evening, and night patterns in one glance.
 
 ### Security
