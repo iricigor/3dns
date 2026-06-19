@@ -574,14 +574,12 @@
     }
 
     .graph-controls {
-      position: absolute;
-      top: 12px;
-      right: 12px;
       display: flex;
       gap: 12px;
       align-items: flex-start;
-      z-index: 1;
-      max-width: calc(100% - 24px);
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      margin: 0 0 8px;
     }
 
     .graph-controls .control-group {
@@ -866,11 +864,7 @@
       }
 
       .graph-controls {
-        position: static;
-        max-width: none;
         justify-content: flex-end;
-        flex-wrap: wrap;
-        margin-bottom: 8px;
       }
 
       .graph-controls .control-group {
@@ -974,19 +968,19 @@
           <div id="heroValue" class="value">--</div>
           <div id="heroMeta" class="meta">Waiting for data...</div>
 
-          <div class="spark-wrap">
-            <div class="graph-controls" aria-label="Graph controls">
-              <div class="control-group">
-                <label for="lineZoom">Zoom</label>
-                <input id="lineZoom" type="range" min="60" max="220" step="5" value="100" aria-label="Zoom graph line" />
-                <span id="lineZoomValue" class="control-value">100%</span>
-              </div>
-              <div id="graphRotateControl" class="control-group">
-                <label for="lineRotate">3D rotate</label>
-                <input id="lineRotate" type="range" min="-45" max="45" step="1" value="0" aria-label="Rotate 3D line" />
-                <span id="lineRotateValue" class="control-value">0°</span>
-              </div>
+          <div class="graph-controls" aria-label="Graph controls">
+            <div class="control-group">
+              <label for="lineZoom">Zoom</label>
+              <input id="lineZoom" type="range" min="60" max="220" step="5" value="100" aria-label="Zoom graph line" />
+              <span id="lineZoomValue" class="control-value">100%</span>
             </div>
+            <div id="graphRotateControl" class="control-group">
+              <label for="lineRotate">3D rotate</label>
+              <input id="lineRotate" type="range" min="-45" max="45" step="1" value="0" aria-label="Rotate 3D line" />
+              <span id="lineRotateValue" class="control-value">0°</span>
+            </div>
+          </div>
+          <div class="spark-wrap">
             <svg id="sparkline" class="spark" viewBox="0 0 700 120" preserveAspectRatio="none" role="img" aria-label="24 hour glucose trend">
               <g id="sparkSegments"></g>
             </svg>
@@ -1081,9 +1075,9 @@
     </section>
     <section class="settings-section" aria-labelledby="settingsAboutTitle">
       <h2 id="settingsAboutTitle">About</h2>
-      <p class="about-meta">Updated: 2026-06-18 20:38 UTC</p>
-      <p class="about-copy">Refined 3D mountain guides so each point renders peak/valley side lines on one direction, with matching point colors and longer side spans.</p>
-      <p class="about-copy">Last PR: <a href="https://github.com/iricigor/3dns/pull/30" target="_blank" rel="noreferrer">#30 — Update mountain view visuals for data points</a></p>
+      <p class="about-meta">Updated: 2026-06-19 07:52 UTC</p>
+      <p class="about-copy">Moved zoom/rotate sliders above the graph and improved 3D drag rotation so horizontal and vertical drags control separate axes.</p>
+      <p class="about-copy">Last PR: <a href="https://github.com/iricigor/3dns/pull/31" target="_blank" rel="noreferrer">#31 — Update 3D drag rotation controls</a></p>
     </section>
   </aside>
 
@@ -1132,6 +1126,7 @@
     const lineViewStorageKey = '3dns.lineViewMode';
     const lineZoomStorageKey = '3dns.lineZoom';
     const lineRotateStorageKey = '3dns.lineRotate';
+    const lineTiltStorageKey = '3dns.lineTilt';
 
     let latestModel = null;
     let glucoseUnit = 'mgdl';
@@ -1139,6 +1134,7 @@
     let lineViewMode = '2d';
     let lineZoom = 100;
     let lineRotate = 0;
+    let lineTilt = 0;
     let graphDragState = null;
 
     function restoreStoredUrl() {
@@ -1202,6 +1198,11 @@
           lineRotate = storedLineRotate;
           lineRotateInput.value = String(storedLineRotate);
         }
+
+        const storedLineTilt = Number.parseInt(window.localStorage.getItem(lineTiltStorageKey) || '', 10);
+        if (Number.isFinite(storedLineTilt) && storedLineTilt >= -30 && storedLineTilt <= 30) {
+          lineTilt = storedLineTilt;
+        }
       } catch (err) {
         // Ignore storage access failures and continue without persistence.
       }
@@ -1250,6 +1251,14 @@
       updateGraphControls();
     }
 
+    function setLineTilt(nextTilt, persistValue) {
+      lineTilt = clamp(Number.isFinite(nextTilt) ? nextTilt : 0, -30, 30);
+      if (persistValue) {
+        persistSetting(lineTiltStorageKey, String(lineTilt));
+      }
+      updateGraphControls();
+    }
+
     function stopGraphDrag(shouldPersist) {
       if (!graphDragState) {
         return;
@@ -1267,6 +1276,7 @@
 
       if (shouldPersist) {
         persistSetting(lineRotateStorageKey, String(lineRotate));
+        persistSetting(lineTiltStorageKey, String(lineTilt));
       }
 
       sparkWrap.dataset.dragging = 'false';
@@ -1283,8 +1293,7 @@
       const zoomScale = clamp(lineZoom / 100, 0.6, 2.2);
       sparkline.style.transformOrigin = '50% 50%';
       if (is3dView()) {
-        const rotateX = clamp(-lineRotate * 0.3, -18, 18);
-        sparkline.style.transform = 'perspective(1000px) rotateX(' + rotateX.toFixed(2) + 'deg) rotateY(' + lineRotate.toFixed(2) + 'deg) scale(' + zoomScale.toFixed(2) + ')';
+        sparkline.style.transform = 'perspective(1000px) rotateX(' + lineTilt.toFixed(2) + 'deg) rotateY(' + lineRotate.toFixed(2) + 'deg) scale(' + zoomScale.toFixed(2) + ')';
       } else {
         stopGraphDrag(false);
         sparkline.style.transform = 'scale(' + zoomScale.toFixed(2) + ')';
@@ -2082,7 +2091,9 @@
       graphDragState = {
         pointerId: event.pointerId,
         startX: event.clientX,
-        startRotate: lineRotate
+        startY: event.clientY,
+        startRotate: lineRotate,
+        startTilt: lineTilt
       };
       sparkWrap.dataset.dragging = 'true';
       if (sparkWrap.setPointerCapture) {
@@ -2101,7 +2112,9 @@
       }
 
       const deltaX = event.clientX - graphDragState.startX;
+      const deltaY = event.clientY - graphDragState.startY;
       setLineRotate(Math.round(graphDragState.startRotate + deltaX * 0.25), false);
+      setLineTilt(Math.round(graphDragState.startTilt - deltaY * 0.2), false);
     });
 
     sparkWrap.addEventListener('pointerup', (event) => {
